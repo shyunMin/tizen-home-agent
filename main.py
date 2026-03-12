@@ -84,6 +84,56 @@ class TargetMessage(BaseModel):
 async def root():
     return {"message": "Tizen Home Agent Server with Gemini is running"}
 
+@app.post("/connect")
+async def connect_check():
+    """
+    클라이언트 연결 시 시스템 상태(SDB, LLM, 도구)를 체크합니다.
+    """
+    status_report = {
+        "sdb_reverse": "Unknown",
+        "llm_ready": "Unknown",
+        "tools_ready": "Unknown",
+        "message": "",
+        "can_chat": False
+    }
+    
+    # 1. SDB Reverse 체크
+    try:
+        result = subprocess.run(["sdb", "reverse", "--list"], capture_output=True, text=True, timeout=5)
+        if "tcp:8080" in result.stdout:
+            status_report["sdb_reverse"] = "OK"
+        else:
+            status_report["sdb_reverse"] = "Missing (tcp:8080 not found)"
+    except Exception as e:
+        status_report["sdb_reverse"] = f"Error: {str(e)}"
+
+    # 2. LLM 및 도구 세팅 체크
+    try:
+        # 가벼운 테스트 메시지로 LLM 응답성 확인
+        test_chat = model.start_chat()
+        test_response = test_chat.send_message("hi", generation_config={"max_output_tokens": 5})
+        if test_response and test_response.text:
+            status_report["llm_ready"] = "OK"
+            
+            # 도구 세팅 확인 (모델 설정에 도구가 포함되어 있는지)
+            if model._tools:
+                status_report["tools_ready"] = "OK"
+            else:
+                status_report["tools_ready"] = "Warning: No tools configured"
+        else:
+            status_report["llm_ready"] = "No response"
+    except Exception as e:
+        status_report["llm_ready"] = f"Error: {str(e)}"
+
+    # 최종 결과 판단
+    if status_report["sdb_reverse"] == "OK" and status_report["llm_ready"] == "OK":
+        status_report["can_chat"] = True
+        status_report["message"] = "시스템이 준비되었습니다. 대화가 가능합니다."
+    else:
+        status_report["message"] = "시스템 준비 중 문제가 발견되었습니다. 상태를 확인하세요."
+
+    return status_report
+
 @app.post("/message")
 async def receive_message(message: TargetMessage):
     print(f"Received from target: {message}")
