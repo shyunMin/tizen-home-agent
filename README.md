@@ -68,5 +68,20 @@ Tizen 기기에서 직접 서버로 데이터를 전송할 때 사용합니다.
 - **Method**: `POST`
 - **Body**: `{"device_id": "TIZEN-001", "content": "Status update..."}`
 
+## 테스트 방법 (CLI 클라이언트)
+
+`test.py`를 사용하면 별도의 `curl` 명령어 없이 터미널에서 간편하게 에이전트와 대화할 수 있습니다.
+
+```bash
+# 대화형 모드 시작 (연속 대화 가능)
+python test.py
+
+# 실행 시 바로 메시지 전달
+python test.py "와이파이 켜줘"
+```
+
+- **종료**: `exit`, `quit`, `q` 또는 `Ctrl+C` 입력
+- **특징**: 서버 상태 체크, 텍스트 응답 출력, 생성된 Flutter UI 코드 확인 가능
+
 ## 라이선스
 MIT License
