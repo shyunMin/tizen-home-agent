@@ -106,6 +106,25 @@ async def lifespan(app: FastAPI):
     
     # 3. Gemini Function Declaration 생성
     declarations = []
+    
+    # [GenUI] 일반적인 UI 생성을 위한 도구 추가
+    declarations.append(
+        genai.types.FunctionDeclaration(
+            name="render_ui",
+            description="사용자가 요청한 디자인이나 레이아웃을 Flutter(Dart) 코드로 생성하여 보여줍니다. (예: 예약 시스템, 대시보드, 카드 등)",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "dart_code": {
+                        "type": "string",
+                        "description": "생성할 Flutter 위젯 코드 (Dart)"
+                    }
+                },
+                "required": ["dart_code"]
+            }
+        )
+    )
+
     for tool in TIZEN_TOOLS_DATA:
         # Gemini가 한글 설명도 잘 이해하도록 데이터 구성
         declarations.append(
@@ -119,9 +138,11 @@ async def lifespan(app: FastAPI):
     # 4. 모델 초기화
     system_instruction = (
         "당신은 유능하고 친절한 AI 어시스턴트입니다. "
-        "사용자의 일반적인 질문이나 대화에는 자연스럽게 응답하고, "
-        "Tizen 기기 제어와 관련된 요청(WiFi, 볼륨, 앱 실행 등)이 있을 경우에만 제공된 도구(Tizen 액션)를 사용하세요. "
-        "도구를 사용한 후에는 그 결과를 바탕으로 사용자에게 친절하게 한국어로 설명해 주세요."
+        "사용자의 일반적인 질문이나 대화에는 자연스럽게 응답하세요. "
+        "만약 사용자가 특정 화면, 레이아웃, 혹은 디자인(예: 비행기 예약 UI, 날씨 카드 등)을 그려달라고 하거나 보여달라고 하면 "
+        "반드시 'render_ui' 도구를 사용하여 고퀄리티의 Flutter(Dart) 코드를 제공하세요. "
+        "Tizen 기기 제어와 관련된 요청이 있을 경우에는 해당하는 Tizen 액션 도구를 사용하세요. "
+        "모든 도구 사용 후에는 수행 결과를 사용자에게 친절하게 한국어로 설명해 주세요."
     )
     model = genai.GenerativeModel(
         model_name='gemini-2.5-flash', # 안정적인 버전으로 권장 (혹은 1.5-flash)
@@ -186,34 +207,41 @@ async def chat_endpoint(request: ChatRequest):
         if function_call:
             # 호출된 함수명과 인자값 추출
             args_dict = {k: v for k, v in function_call.args.items()}
-            result = execute_tizen_action(function_call.name, args_dict)
             
-            if result["status"] == "error":
-                text_response = f"장치 제어 중 문제가 발생했습니다: {result['message']}"
+            # [GenUI] render_ui 도구인 경우
+            if function_call.name == "render_ui":
+                ui_code = args_dict.get("dart_code", "").strip()
+                text_response = "요청하신 UI 디자인을 생성했습니다."
             else:
-                # 결과 전달 후 최종 응답 받기
-                response = chat.send_message({
-                    "role": "function",
-                    "parts": [{
-                        "function_response": {
-                            "name": function_call.name,
-                            "response": result
-                        }
-                    }]
-                })
+                # Tizen 액션 실행
+                result = execute_tizen_action(function_call.name, args_dict)
                 
-                # 안전하게 최종 텍스트 추출
-                if response.candidates and response.candidates[0].content.parts:
-                    for part in response.candidates[0].content.parts:
-                        if hasattr(part, 'text') and part.text:
-                            text_response = part.text
-                            break
-                
-                if not text_response:
-                    text_response = f"성공적으로 {function_call.name} 액션을 수행했습니다."
-                
-                # UI 코드 생성
-                ui_code = f"""
+                if result["status"] == "error":
+                    text_response = f"장치 제어 중 문제가 발생했습니다: {result['message']}"
+                else:
+                    # 결과 전달 후 최종 응답 받기
+                    response = chat.send_message({
+                        "role": "function",
+                        "parts": [{
+                            "function_response": {
+                                "name": function_call.name,
+                                "response": result
+                            }
+                        }]
+                    })
+                    
+                    # 안전하게 최종 텍스트 추출
+                    if response.candidates and response.candidates[0].content.parts:
+                        for part in response.candidates[0].content.parts:
+                            if hasattr(part, 'text') and part.text:
+                                text_response = part.text
+                                break
+                    
+                    if not text_response:
+                        text_response = f"성공적으로 {function_call.name} 액션을 수행했습니다."
+                    
+                    # UI 코드 생성
+                    ui_code = f"""
 Card(
   child: ListTile(
     leading: Icon(Icons.settings_remote, color: Colors.blue),
