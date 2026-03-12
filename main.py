@@ -124,7 +124,7 @@ async def lifespan(app: FastAPI):
         "도구를 사용한 후에는 그 결과를 바탕으로 사용자에게 친절하게 한국어로 설명해 주세요."
     )
     model = genai.GenerativeModel(
-        model_name='gemini-2.0-flash', # 안정적인 버전으로 권장 (혹은 1.5-flash)
+        model_name='gemini-2.5-flash', # 안정적인 버전으로 권장 (혹은 1.5-flash)
         tools=[genai.types.Tool(function_declarations=declarations)] if declarations else None,
         system_instruction=system_instruction
     )
