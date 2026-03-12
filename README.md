@@ -1,12 +1,12 @@
 # Tizen Home Agent with Gemini 2.5 Flash
 
-Tizen 기기를 효율적으로 제어하기 위한 인텔리전트 에이전트 서버입니다. FastAPI와 Gemini 2.5 Flash의 Function Calling 기능을 사용하여 자연어로 Tizen 기기를 제어하고, 결과를 Flutter UI 코드로 응답받을 수 있습니다.
+Tizen 기기를 효율적으로 제어하기 위한 인텔리전트 에이전트 서버입니다. FastAPI와 Gemini 2.5 Flash의 Function Calling 기능을 사용하여 자연어로 Tizen 기기를 제어하고, 결과를 **A2UI(Agent-to-UI) v0.9 규격의 JSON**으로 응답받을 수 있습니다.
 
 ## 주요 기능
 - **동적 도구 로드**: 서버 시작 시 Tizen 기기에서 사용 가능한 모든 액션(`action-tool list-actions`)을 자동으로 감지하여 LLM 도구로 등록합니다.
 - **다재다능한 AI 어시스턴트**: 기기 제어뿐만 아니라 일반적인 질문이나 일상 대화에도 자연스럽게 응답합니다.
 - **자연어 기기 제어**: "와이파이 켜줘", "볼륨 조절해줘" 등 일상적인 명령어로 Tizen 기기 제어 가능
-- **GenUI 응답**: 기기 제어 성공 시 상태를 시각적으로 보여주는 Flutter(Dart) 위젯 코드 반환
+- **GenUI (A2UI)**: 기기 제어 성공 시 또는 디자인 요청 시 상태를 시각적으로 보여주는 A2UI v0.9 규격 JSON 반환
 - **SDB 자동화**: 서버 시작 시 `sdb reverse` 명령어를 자동으로 실행하여 통신 환경 설정
 
 ## 요구 사항
@@ -61,12 +61,46 @@ python main.py
 - **Body**: `{"message": "와이파이 꺼줘"}` 또는 `{"message": "피자 메뉴 추천해줘"}`
 - **Response**:
   - `text`: Gemini의 답변 메시지
-  - `ui_code`: (기기 제어 및 디자인 요청 시) **A2UI v0.9 규격의 JSON 문자열** (일반 대화 시 빈 문자열)
+  - `ui_code`: (기기 제어 및 디자인 요청 시) **A2UI v0.9 규격의 JSON 문자열**
 
 ### 3. 기기 메시지 수신 엔드포인트 (`/message`)
 Tizen 기기에서 직접 서버로 데이터를 전송할 때 사용합니다.
 - **Method**: `POST`
 - **Body**: `{"device_id": "TIZEN-001", "content": "Status update..."}`
+
+## A2UI (Agent-to-UI) 응답 예시
+
+에이전트가 UI를 생성할 때 `ui_code` 필드에 포함되는 JSON 예시입니다. (v0.9 Draft 규격 준수)
+
+```json
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "weather_card",
+      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "weather_card",
+      "components": [
+        { "id": "root", "component": "Card", "child": "container" },
+        {
+          "id": "container",
+          "component": "Column",
+          "children": ["title", "temp_row"]
+        },
+        { "id": "title", "component": "Text", "text": "현재 날씨", "variant": "h2" },
+        { "id": "temp_row", "component": "Row", "children": ["icon", "temp"] },
+        { "id": "icon", "component": "Icon", "name": "wb_sunny" },
+        { "id": "temp", "component": "Text", "text": "24°C" }
+      ]
+    }
+  }
+]
+```
 
 ## 테스트 방법 (CLI 클라이언트)
 
@@ -81,7 +115,7 @@ python test.py "와이파이 켜줘"
 ```
 
 - **종료**: `exit`, `quit`, `q` 또는 `Ctrl+C` 입력
-- **특징**: 서버 상태 체크, 텍스트 응답 출력, 생성된 Flutter UI 코드 확인 가능
+- **특징**: 서버 상태 체크, 텍스트 응답 출력, 생성된 A2UI JSON 코드 확인 가능
 
 ## 라이선스
 MIT License
