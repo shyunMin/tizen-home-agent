@@ -25,18 +25,16 @@ def control_wifi(enabled: bool):
     
     # 제공된 스키마에 맞춘 JSON 데이터 구성
     payload = {
-        "name": "homeWifi",
-        "type": "appControl",
-        "category": "utility",
-        "inputSchema": {
-            "command": command_val
-        },
-        "details": {
-            "appid": "org.tizen.homescreen"
+        "id":1,
+        "params": {
+            "name": "homeWifi",
+            "arguments":{
+                "command": command_val
+            }
         }
     }
     
-    json_data = json.dumps(payload)
+    json_data = json.dumps(payload, separators=(',', ':'))
     
     try:
         # sdb shell 'action-tool execute '{json_data}'' 명령어 실행
