@@ -116,10 +116,12 @@ async def lifespan(app: FastAPI):
             )
         )
     
-    # 4. 모델 초기화 (Gemini 2.5 Flash)
+    # 4. 모델 초기화
+    system_instruction = "당신은 Tizen 홈 에이전트입니다. 사용자의 요청을 분석하여 제공된 도구(Tizen 액션)를 사용하여 기기를 제어하세요. 제어 후에는 수행 결과를 친절하게 한국어로 설명하세요."
     model = genai.GenerativeModel(
-        model_name='gemini-2.5-flash',
-        tools=[genai.types.Tool(function_declarations=declarations)] if declarations else None
+        model_name='gemini-2.0-flash', # 안정적인 버전으로 권장 (혹은 1.5-flash)
+        tools=[genai.types.Tool(function_declarations=declarations)] if declarations else None,
+        system_instruction=system_instruction
     )
     
     print(f"System Ready. {len(TIZEN_TOOLS_DATA)} Tizen tools integrated.")
@@ -151,6 +153,7 @@ async def connect_check():
         "sdb_reverse": "OK" if sdb_ok else "Disconnected",
         "llm_ready": "OK" if model else "Not Initialized",
         "tools_count": len(TIZEN_TOOLS_DATA),
+        "tools_list": [t.get("name") for t in TIZEN_TOOLS_DATA],
         "can_chat": sdb_ok and model is not None,
         "message": "환영합니다! 모든 준비가 완료되었습니다." if sdb_ok else "SDB 연결을 확인해주세요."
     }
@@ -167,21 +170,23 @@ async def chat_endpoint(request: ChatRequest):
         ui_code = ""
         text_response = ""
         
-        # 함수 호출 분석
+        # 1. 첫 응답에서 함수 호출이 있는지 확인 (안전한 접근)
         function_call = None
-        for part in response.candidates[0].content.parts:
-            if part.function_call:
-                function_call = part.function_call
-                break
+        if response.candidates and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if part.function_call:
+                    function_call = part.function_call
+                    break
         
         if function_call:
-            # 동적 실행
-            result = execute_tizen_action(function_call.name, dict(function_call.args))
+            # 호출된 함수명과 인자값 추출
+            args_dict = {k: v for k, v in function_call.args.items()}
+            result = execute_tizen_action(function_call.name, args_dict)
             
             if result["status"] == "error":
                 text_response = f"장치 제어 중 문제가 발생했습니다: {result['message']}"
             else:
-                # 최종 텍스트 응답 생성
+                # 결과 전달 후 최종 응답 받기
                 response = chat.send_message({
                     "role": "function",
                     "parts": [{
@@ -191,20 +196,37 @@ async def chat_endpoint(request: ChatRequest):
                         }
                     }]
                 })
-                text_response = response.text
                 
-                # 액션 종류에 따른 동적 UI 코드 (기본 템플릿)
+                # 안전하게 최종 텍스트 추출
+                if response.candidates and response.candidates[0].content.parts:
+                    for part in response.candidates[0].content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            text_response = part.text
+                            break
+                
+                if not text_response:
+                    text_response = f"성공적으로 {function_call.name} 액션을 수행했습니다."
+                
+                # UI 코드 생성
                 ui_code = f"""
 Card(
   child: ListTile(
     leading: Icon(Icons.settings_remote, color: Colors.blue),
     title: Text('{function_call.name} 실행 완료'),
-    subtitle: Text('{str(function_call.args)}'),
+    subtitle: Text('{json.dumps(args_dict, ensure_ascii=False)}'),
   ),
 )
 """.strip()
         else:
-            text_response = response.text
+            # 함수 호출이 없는 경우 안전하게 텍스트 가져오기
+            if response.candidates and response.candidates[0].content.parts:
+                 for part in response.candidates[0].content.parts:
+                     if hasattr(part, 'text') and part.text:
+                         text_response = part.text
+                         break
+            
+            if not text_response:
+                text_response = "죄송합니다. 적절한 답변을 생성하지 못했습니다."
             
         return {"text": text_response, "ui_code": ui_code}
         
