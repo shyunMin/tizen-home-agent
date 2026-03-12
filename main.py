@@ -117,7 +117,12 @@ async def lifespan(app: FastAPI):
         )
     
     # 4. 모델 초기화
-    system_instruction = "당신은 Tizen 홈 에이전트입니다. 사용자의 요청을 분석하여 제공된 도구(Tizen 액션)를 사용하여 기기를 제어하세요. 제어 후에는 수행 결과를 친절하게 한국어로 설명하세요."
+    system_instruction = (
+        "당신은 유능하고 친절한 AI 어시스턴트입니다. "
+        "사용자의 일반적인 질문이나 대화에는 자연스럽게 응답하고, "
+        "Tizen 기기 제어와 관련된 요청(WiFi, 볼륨, 앱 실행 등)이 있을 경우에만 제공된 도구(Tizen 액션)를 사용하세요. "
+        "도구를 사용한 후에는 그 결과를 바탕으로 사용자에게 친절하게 한국어로 설명해 주세요."
+    )
     model = genai.GenerativeModel(
         model_name='gemini-2.0-flash', # 안정적인 버전으로 권장 (혹은 1.5-flash)
         tools=[genai.types.Tool(function_declarations=declarations)] if declarations else None,
