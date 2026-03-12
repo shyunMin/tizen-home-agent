@@ -61,7 +61,7 @@ python main.py
 - **Body**: `{"message": "와이파이 꺼줘"}` 또는 `{"message": "피자 메뉴 추천해줘"}`
 - **Response**:
   - `text`: Gemini의 답변 메시지
-  - `ui_code`: (기기 제어 시) Flutter UI 카드 위젯 코드 (일반 대화 시 빈 문자열)
+  - `ui_code`: (기기 제어 및 디자인 요청 시) **A2UI v0.9 규격의 JSON 문자열** (일반 대화 시 빈 문자열)
 
 ### 3. 기기 메시지 수신 엔드포인트 (`/message`)
 Tizen 기기에서 직접 서버로 데이터를 전송할 때 사용합니다.
