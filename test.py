@@ -55,17 +55,36 @@ def send_chat(message):
         print(f"❌ 전송 실패: {str(e)}")
 
 if __name__ == "__main__":
-    # 인자로 메시지를 받았는지 확인
+    if not check_connection():
+        print("\n⚠️ 시스템이 준비되지 않아 대화를 시작할 수 없습니다.")
+        sys.exit(1)
+
+    print("\n" + "="*50)
+    print("💬 Tizen Home Agent와 대화를 시작합니다.")
+    print("   (종료하려면 'exit', 'quit', 또는 'q'를 입력하세요)")
+    print("="*50)
+
+    # 인자로 첫 메시지가 전달된 경우 처리
     if len(sys.argv) > 1:
-        user_input = " ".join(sys.argv[1:])
-    else:
-        # 인자가 없으면 입력을 받음
-        user_input = input("\n메시지를 입력하세요: ")
+        initial_msg = " ".join(sys.argv[1:])
+        send_chat(initial_msg)
 
-    if user_input.lower() in ['exit', 'quit', 'q']:
-        sys.exit()
+    # 지속적인 대화 루프
+    while True:
+        try:
+            user_input = input("\n나 > ").strip()
+            
+            if not user_input:
+                continue
 
-    if check_connection():
-        send_chat(user_input)
-    else:
-        print("\n⚠️ 시스템이 준비되지 않아 메시지를 보낼 수 없습니다.")
+            if user_input.lower() in ['exit', 'quit', 'q', 'ㅂㅂ', '종료']:
+                print("\n👋 대화를 종료합니다. 감사합니다!")
+                break
+
+            send_chat(user_input)
+            
+        except KeyboardInterrupt:
+            print("\n\n👋 프로그램을 강제 종료합니다.")
+            break
+        except Exception as e:
+            print(f"\n❌ 오류 발생: {e}")
