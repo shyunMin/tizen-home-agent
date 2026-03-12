@@ -1,0 +1,21 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Tizen / SDB
+*.log
+tizen-build/
+*.tpk
+*.wgt
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
