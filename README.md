@@ -8,6 +8,39 @@ Tizen 기기를 효율적으로 제어하기 위한 인텔리전트 에이전트
 - **자연어 기기 제어**: "와이파이 켜줘", "볼륨 조절해줘" 등 일상적인 명령어로 Tizen 기기 제어 가능
 - **GenUI (A2UI)**: 기기 제어 성공 시 또는 디자인 요청 시 상태를 시각적으로 보여주는 A2UI v0.9 규격 JSON 반환
 - **SDB 자동화**: 서버 시작 시 `sdb reverse` 명령어를 자동으로 실행하여 통신 환경 설정
+- **Router-Worker 아키텍처**: 사용자의 요청을 분석하는 Router와 목적별 전담 Worker(검색, 제어, 디자인)로 구성된 고성능 에이전트 엔진
+
+## 에이전트 아키텍처
+
+본 에이전트는 효율적인 작업 분배와 정확한 응답을 위해 **2단계 라우터-워커(Router-Worker)** 구조로 동작합니다.
+
+```mermaid
+graph TD
+    User([사용자 요청]) --> Router{Router Agent<br/>Gemini 2.5 Flash}
+    
+    Router -- 의도 분석/태스크 분류 --> Tasks{Task Queue}
+    
+    Tasks -- "general_chat" --> ChatAg[Chat Worker<br/>일상 대화 및 인사]
+    Tasks -- "search" --> SearchAg[Search Worker<br/>구글 검색 기반 최신 정보]
+    Tasks -- "device_control_a2ui" --> DeviceAg[Device Worker<br/>Tizen 제어 및 제어 UI 생성]
+    Tasks -- "draw_a2ui" --> DrawAg[A2UI Worker<br/>UI/UX 디자인 전담]
+    
+    ChatAg --> Aggregator[결과 통합기]
+    SearchAg --> Aggregator
+    DeviceAg --> Aggregator
+    DrawAg --> Aggregator
+    
+    Aggregator --> FinalResponse([최종 텍스트 + A2UI 코드])
+```
+
+### 동작 순서
+1. **1단계 (Router)**: 사용자의 메시지가 입력되면 **Router Agent**가 요청의 의도를 분석하여 `general_chat`, `search`, `device_control_a2ui`, `draw_a2ui` 중 필요한 태스크를 결정합니다.
+2. **2단계 (Worker)**: 분류된 태스크에 따라 각 분야의 **전담 워커(Worker)**들이 병렬로 실행됩니다.
+    - **Chat Worker**: 인사, 일상 대화 등 외부 정보가 필요 없는 답변을 담당합니다.
+    - **Search Worker**: **Google Search Grounding**을 사용하여 최신 정보를 검색합니다.
+    - **Device Worker**: 실제 Tizen 기기 액션을 수행하고 제어 결과 UI를 생성합니다.
+    - **A2UI Worker**: 도구 없이 창의적인 프리미엄 UI 디자인 사양을 생성합니다.
+3. **3단계 (Integration)**: 각 워커가 반환한 결과를 하나로 통합하여 사용자에게 텍스트 답변과 A2UI 코드를 동시에 제공합니다.
 
 ## 요구 사항
 - Ubuntu 24.04 (또는 호환 리눅스 환경)
