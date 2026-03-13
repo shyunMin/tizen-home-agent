@@ -250,7 +250,15 @@ async def a2ui_draw_worker(message: str):
 async def lifespan(app: FastAPI):
     global client, TIZEN_TOOLS_DATA
     
-    # 도구 및 클라이언트 초기화
+    # 1. SDB Reverse 설정 (기기 -> 서버 통신용)
+    try:
+        print("Setting up SDB reverse port forwarding...")
+        subprocess.run(["sdb", "reverse", "tcp:8080", "tcp:8080"], check=True, timeout=5)
+        print("SDB reverse setup successful.")
+    except Exception as e:
+        print(f"SDB reverse setup failed: {e}. (Physical device might not be connected via SDB)")
+
+    # 2. 도구 및 클라이언트 초기화
     TIZEN_TOOLS_DATA = discover_tizen_tools()
     client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
     
