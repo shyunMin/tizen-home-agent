@@ -2,7 +2,7 @@ import requests
 import json
 import sys
 
-BASE_URL = "http://localhost:8080"
+BASE_URL = "http://localhost:9090"
 
 def check_connection():
     print(f"\n[1/2] 서버 연결 확인 중... ({BASE_URL}/connect)")

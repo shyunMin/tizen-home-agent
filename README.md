@@ -74,7 +74,7 @@ GOOGLE_API_KEY=your_gemini_api_key_here
 ```bash
 python main.py
 ```
-서버는 기본적으로 `http://0.0.0.0:8080`에서 실행됩니다.
+서버는 기본적으로 `http://0.0.0.0:9090`에서 실행됩니다.
 
 ## API 사용법
 
@@ -161,7 +161,7 @@ python test.py "오늘 서울 날씨 알려줘"
 ```text
 (venv) jay@Oasis:~/github/tizen-home-agent(main)$ python test.py 
 
-[1/2] 서버 연결 확인 중... (http://localhost:8080/connect)
+[1/2] 서버 연결 확인 중... (http://localhost:9090/connect)
 ✅ 서버 연결 성공!
    - SDB 상태: OK
    - LLM 상태: OK

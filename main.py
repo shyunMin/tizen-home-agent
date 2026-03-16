@@ -5,7 +5,9 @@ import json
 import asyncio
 import re
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
@@ -17,7 +19,9 @@ load_dotenv()
 # 전역 변수
 TIZEN_TOOLS_DATA = []
 client = None
-AI_RESPONSE_TIMEOUT = 30  # 개별 에이전트 응답 최대 대기 시간
+AI_RESPONSE_TIMEOUT = 45  # 개별 에이전트 응답 최대 대기 시간 (검색 고려)
+DEVICE_SERIAL = None      # 연결된 기기 시리얼
+PORT = 9090               # 기본 포트를 9090으로 변경
 
 # --- 유틸리티 함수 ---
 
@@ -33,14 +37,53 @@ def extract_json(text: str):
         return obj_match.group(1).strip()
     return text.strip()
 
+def get_device_serial():
+    """연결된 첫 번째 Tizen 디바이스의 시리얼을 가져옵니다."""
+    try:
+        res = subprocess.run(["sdb", "devices"], capture_output=True, text=True)
+        lines = res.stdout.strip().split("\n")[1:] # 첫 줄(Header) 제외
+        for line in lines:
+            if "device" in line:
+                return line.split()[0]
+    except:
+        pass
+    return None
+
+def setup_sdb_reverse():
+    """SDB 역방향 포트 포워딩을 설정합니다."""
+    serial = get_device_serial()
+    try:
+        cmd = ["sdb"]
+        if serial:
+            cmd.extend(["-s", serial])
+        cmd.extend(["reverse", f"tcp:{PORT}", f"tcp:{PORT}"])
+        
+        print(f"Setting up SDB reverse ({serial or 'Default'}) on port {PORT}...")
+        subprocess.run(cmd, check=True, timeout=5, capture_output=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        # 이미 설정되어 있는 경우 에러가 발생할 수 있으나, 무시해도 됨
+        if b"already" in e.stderr:
+            return True
+        print(f"SDB reverse setup failed: {e.stderr.decode()}")
+    except Exception as e:
+        print(f"SDB reverse unexpected error: {e}")
+    return False
+
 # --- 도구 기능 정의 (Worker용) ---
 
 def discover_tizen_tools():
     """SDB를 통해 디바이스에서 사용 가능한 도구 목록과 스키마를 가져옵니다."""
+    serial = get_device_serial()
+    cmd = ["sdb"]
+    if serial:
+        cmd.extend(["-s", serial])
+    cmd.extend(["shell", "action-tool", "list-actions"])
+    
+    print(f"Discovering Tizen tools via SDB ({serial or 'Default'})...")
     try:
-        print("Discovering Tizen tools via SDB...")
         result = subprocess.run(
-            ["sdb", "shell", "action-tool list-actions"],
+            cmd,
             capture_output=True,
             text=True,
             check=True,
@@ -103,9 +146,15 @@ def execute_tizen_action(name: str, arguments: dict):
     full_command = f"action-tool execute '{json_data}'"
     
     print(f"[Worker:Device] Executing: {full_command}")
+    serial = get_device_serial()
+    cmd = ["sdb"]
+    if serial:
+        cmd.extend(["-s", serial])
+    cmd.extend(["shell", full_command])
+    
     try:
         result = subprocess.run(
-            ["sdb", "shell", full_command],
+            cmd,
             capture_output=True,
             text=True,
             check=True,
@@ -248,15 +297,11 @@ async def a2ui_draw_worker(message: str):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global client, TIZEN_TOOLS_DATA
+    global client, TIZEN_TOOLS_DATA, DEVICE_SERIAL
     
-    # 1. SDB Reverse 설정 (기기 -> 서버 통신용)
-    try:
-        print("Setting up SDB reverse port forwarding...")
-        subprocess.run(["sdb", "reverse", "tcp:8080", "tcp:8080"], check=True, timeout=5)
-        print("SDB reverse setup successful.")
-    except Exception as e:
-        print(f"SDB reverse setup failed: {e}. (Physical device might not be connected via SDB)")
+    # 1. 시리얼 감지 및 SDB Reverse 설정
+    DEVICE_SERIAL = get_device_serial()
+    setup_sdb_reverse()
 
     # 2. 도구 및 클라이언트 초기화
     TIZEN_TOOLS_DATA = discover_tizen_tools()
@@ -266,6 +311,15 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+# CORS 설정 추가 (플러터 및 웹 클라이언트 호환성 강화)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class ChatRequest(BaseModel):
     message: str
@@ -277,29 +331,43 @@ async def root():
 @app.post("/connect")
 async def connect_check():
     """시스템 상태 리포트 (기존 test.py 호환용)"""
+    serial = get_device_serial()
+    
+    # 연결 확인 시 터널이 없다면 재시도
+    rev_check_cmd = ["sdb"]
+    if serial:
+        rev_check_cmd.extend(["-s", serial])
+    rev_check_cmd.extend(["reverse", "--list"])
+    
     try:
-        rev_check = subprocess.run(["sdb", "reverse", "--list"], capture_output=True, text=True)
-        sdb_ok = "tcp:8080" in rev_check.stdout
+        rev_check = subprocess.run(rev_check_cmd, capture_output=True, text=True)
+        sdb_ok = f"tcp:{PORT}" in rev_check.stdout
+        
+        # 만약 리스트에 없는데 시리얼이 있다면 다시 설정 시도
+        if not sdb_ok and serial:
+            sdb_ok = setup_sdb_reverse()
     except:
         sdb_ok = False
 
     return {
         "sdb_reverse": "OK" if sdb_ok else "Disconnected",
         "llm_ready": "OK" if client else "Not Initialized",
+        "device_serial": serial or "Not Detected",
         "tools_count": len(TIZEN_TOOLS_DATA),
         "tools_list": [t.get("name") for t in TIZEN_TOOLS_DATA],
-        "can_chat": sdb_ok and client is not None,
-        "message": "환영합니다! Router-Worker 시스템이 준비되었습니다." if sdb_ok else "SDB 연결을 확인해주세요."
+        "can_chat": client is not None, # SDB는 팁으로만 제공
+        "message": "환영합니다! Router-Worker 시스템이 준비되었습니다." if sdb_ok else "SDB 연결이 감지되지 않았습니다. 실물 기기 사용 시 USB 연결을 확인하세요."
     }
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
+    start_time = asyncio.get_event_loop().time()
     try:
         # 1단계: Router Agent를 통한 의도 파악
-        print(f"\n[Router] Analyzing request: {request.message}")
+        print(f"\n[ORCHESTRATOR] Analyzing request: {request.message}")
         routing_result = await router_agent(request.message)
-        tasks = routing_result.get("tasks", ["search"])
-        print(f"[Router] Detected Tasks: {tasks}")
+        tasks = routing_result.get("tasks", ["general_chat"])
+        print(f"[ORCHESTRATOR] Detected Tasks: {tasks}")
         
         # 2단계: 파싱된 Task에 따라 Worker 호출 (병렬 실행)
         worker_calls = []
@@ -313,10 +381,11 @@ async def chat_endpoint(request: ChatRequest):
             elif task == "general_chat":
                 worker_calls.append(chat_worker(request.message))
         
-        # 워커 결과 취합
         if not worker_calls:
             worker_calls.append(chat_worker(request.message))
             
+        # 개별 워커 실행 대기 및 시간 측정
+        print(f"[ORCHESTRATOR] Dispatching {len(worker_calls)} worker(s)...")
         results = await asyncio.gather(*(asyncio.wait_for(call, timeout=AI_RESPONSE_TIMEOUT) for call in worker_calls))
         
         # 결과 통합
@@ -326,20 +395,38 @@ async def chat_endpoint(request: ChatRequest):
         for res in results:
             if res.get("text"):
                 combined_text.append(res["text"])
-            if res.get("ui_code") and not combined_ui: # 첫 번째 발견된 UI 코드 사용
+            if res.get("ui_code") and not combined_ui:
                 combined_ui = res["ui_code"]
         
-        return {
-            "text": "\n\n".join(combined_text),
-            "ui_code": combined_ui
-        }
+        duration = asyncio.get_event_loop().time() - start_time
+        print(f"[ORCHESTRATOR] Task completed in {duration:.2f}s")
+
+        return JSONResponse(
+            content={
+                "text": "\n\n".join(combined_text),
+                "ui_code": combined_ui
+            },
+            headers={"Connection": "keep-alive"}
+        )
 
     except asyncio.TimeoutError:
-        return {"text": "에이전트 응답 시간이 초과되었습니다. 다시 시도해 주세요.", "ui_code": ""}
+        return JSONResponse(
+            status_code=504,
+            content={"text": "에이전트 응답 시간이 초과되었습니다.", "ui_code": ""}
+        )
     except Exception as e:
         import traceback
         print(traceback.format_exc())
         return {"text": f"서버 처리 중 오류 발생: {str(e)}", "ui_code": ""}
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
+    # 0.0.0.0으로 설정하여 SDB 터널링과 직접 IP 접속을 모두 허용
+    # timeout_keep_alive를 유지하여 터널 안정성 확보
+    uvicorn.run(
+        "main:app", 
+        host="0.0.0.0", 
+        port=PORT, 
+        reload=False,
+        timeout_keep_alive=30,
+        access_log=True
+    )
