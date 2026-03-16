@@ -177,8 +177,8 @@ async def router_agent(message: str):
         "사용자의 입력을 분석하여 아래 Task 종류 중 가장 적절한 것들을 리스트로 추출해."
         "\n1. general_chat: 단순 인사, 일상적 대화, 감정 표현, 간단한 질문 등 외부 도구나 검색이 필요 없는 경우. (예: '안녕', '고마워', '넌 누구니?')"
         "\n2. search: 최신 정보, 뉴스, 날씨, 인물 정보 등 실시간 검색이나 지식이 필요한 구체적인 질문. (예: '오늘 서울 날씨 어때?', '최신 삼성 폰 알려줘')"
-        "\n3. device_control_a2ui: Tizen 기기 제어 명령. (예: '볼륨 높여줘', 'TV 꺼줘', '와이파이 설정 열어')"
-        "\n4. draw_a2ui: UI 디자인, 화면 레이아웃 생성 요청. (예: '대시보드 그려줘', '날씨 카드 디자인해줘')"
+        "\n3. device_control_a2ui: Tizen 기기 제어 명령 및 기기 제어 기능에 대한 문의. (예: '볼륨 높여줘', 'TV 꺼줘', '와이파이 설정 열어', '너 기기 제어 가능해?', '어떤 기기 기능을 쓸 수 있어?')"
+        "\n4. draw_a2ui: UI 디자인, 화면 레이아웃 생성 요청 및 UI 생성 능력 문의. (예: '대시보드 그려줘', '날씨 카드 디자인해줘', 'UI 그릴 수 있어?', 'GenUI 생성 가능해?')"
         "\n\n응답은 반드시 아래 JSON 형식으로만 해. 다른 텍스트는 절대 포함하지 마."
         "\n출력 예시: {\"intent\": \"simple/complex\", \"tasks\": [\"general_chat\"]}"
     )
@@ -205,9 +205,16 @@ async def router_agent(message: str):
 async def chat_worker(message: str):
     """2단계 워커: 일반 대화 에이전트 (Chat Agent)"""
     print(f"[Worker:Chat] Handling message: {message}")
+    system_instruction = (
+        "너는 Tizen Home Agent의 Chat Worker야. "
+        "너는 사용자와 친절하게 대화할 수 있으며, 네가 Tizen 기기 제어(볼륨, 앱, 설정 등), "
+        "실시간 웹 검색, 그리고 **A2UI(GenUI) 기반의 화면 생성 및 디자인 능력**을 갖추고 있다는 점을 알고 있어야 해. "
+        "사용자가 능력을 물어보면 기기 제어, 검색, 그리고 멋진 UI 디자인이 가능하다고 당당하게 답변해줘."
+    )
     response = await client.aio.models.generate_content(
         model='gemini-2.5-flash',
-        contents=f"사용자와 친절하게 대화해줘. (인사, 질문 답변 등)\n사용자: {message}"
+        contents=message,
+        config=types.GenerateContentConfig(system_instruction=system_instruction)
     )
     return {"text": response.text, "ui_code": ""}
 
@@ -390,20 +397,37 @@ async def chat_endpoint(request: ChatRequest):
         
         # 결과 통합
         combined_text = []
-        combined_ui = ""
+        all_ui_messages = []
         
         for res in results:
             if res.get("text"):
                 combined_text.append(res["text"])
-            if res.get("ui_code") and not combined_ui:
-                combined_ui = res["ui_code"]
+            
+            # UI 코드가 있으면 JSON으로 파싱하여 메시지 리스트에 추가
+            ui_code = res.get("ui_code")
+            if ui_code:
+                try:
+                    ui_data = json.loads(ui_code)
+                    if isinstance(ui_data, list):
+                        all_ui_messages.extend(ui_data)
+                    else:
+                        all_ui_messages.append(ui_data)
+                except:
+                    # JSON 파싱 실패 시 원본 문자열이라도 보존 (A2UI 형식이 아닐 수 있음)
+                    print(f"[ORCHESTRATOR] Warning: Failed to parse UI code as JSON")
+
+        combined_ui = json.dumps(all_ui_messages, ensure_ascii=False) if all_ui_messages else ""
         
         duration = asyncio.get_event_loop().time() - start_time
+        final_text = "\n\n".join(combined_text)
         print(f"[ORCHESTRATOR] Task completed in {duration:.2f}s")
+        print(f"[ORCHESTRATOR] Response: {final_text[:100]}..." if len(final_text) > 100 else f"[ORCHESTRATOR] Response: {final_text}")
+        if combined_ui:
+            print(f"[ORCHESTRATOR] A2UI UI Code generated ({len(combined_ui)} bytes)")
 
         return JSONResponse(
             content={
-                "text": "\n\n".join(combined_text),
+                "text": final_text,
                 "ui_code": combined_ui
             },
             headers={"Connection": "keep-alive"}

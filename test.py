@@ -28,6 +28,29 @@ def check_connection():
         print(f"❌ 오류 발생: {str(e)}")
         return False
 
+def validate_a2ui(ui_json_str):
+    """
+    A2UI v0.9 규격을 간단히 검증합니다.
+    """
+    try:
+        data = json.loads(ui_json_str)
+        if not isinstance(data, list):
+            return False, "A2UI 응답은 메시지 리스트(Array) 형태여야 합니다."
+        
+        for msg in data:
+            if msg.get("version") != "v0.9":
+                return False, f"지원하지 않는 A2UI 버전입니다: {msg.get('version')}"
+            
+            # createSurface 또는 updateComponents 중 하나는 있어야 함
+            if not any(k in msg for k in ["createSurface", "updateComponents"]):
+                return False, "메시지에 createSurface 또는 updateComponents 필드가 누락되었습니다."
+                
+        return True, "✅ A2UI v0.9 규격 준수 확인"
+    except json.JSONDecodeError:
+        return False, "JSON 형식이 올바르지 않습니다."
+    except Exception as e:
+        return False, f"검증 중 오류 발생: {str(e)}"
+
 def send_chat(message):
     print(f"\n[2/2] 메시지 전송 중: \"{message}\"")
     try:
@@ -43,10 +66,19 @@ def send_chat(message):
             print("-"*50)
             print(f"{data.get('text')}")
             
-            if data.get('ui_code'):
-                print("\n📱 생성된 UI 코드 (Flutter):")
+            ui_code = data.get('ui_code')
+            if ui_code:
+                print("\n📱 생성된 A2UI 코드:")
                 print("-"*50)
-                print(data.get('ui_code'))
+                print(ui_code)
+                
+                # A2UI 규격 검증 수행
+                is_valid, v_msg = validate_a2ui(ui_code)
+                if is_valid:
+                    print(f"\n✨ {v_msg}")
+                else:
+                    print(f"\n⚠️ A2UI 규격 경고: {v_msg}")
+
             print("="*50)
         else:
             print(f"❌ 채팅 오류 (Status: {response.status_code})")

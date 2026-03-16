@@ -42,6 +42,72 @@ graph TD
     - **A2UI Worker**: 도구 없이 창의적인 프리미엄 UI 디자인 사양을 생성합니다.
 3. **3단계 (Integration)**: 각 워커가 반환한 결과를 하나로 통합하여 사용자에게 텍스트 답변과 A2UI 코드를 동시에 제공합니다.
 
+---
+
+## 시스템 아키텍처 및 통신 규격
+
+본 시스템은 **SDB 역방향 포트 포워딩(SDB Reverse Port Forwarding)** 기술을 사용하여 물리적으로 분리된 Tizen 기기와 Linux PC 간의 안정적인 통신을 보장합니다.
+
+### 네트워크 구성도 (Architecture & Connectivity)
+```mermaid
+graph LR
+    subgraph TizenDevice["Tizen Device (Client Side)"]
+        FlutterApp["Flutter App<br/>(AI Chat UI)"]
+        SDBDaemon["SDB Daemon<br/>(Client Port Binding)"]
+    end
+
+    subgraph LinuxPC["Linux PC (Server Side)"]
+        SDBServer["SDB Server Agent<br/>(Reverse Tunnel Manager)"]
+        FastAPIServer["FastAPI Server<br/>(Python Agent - Port 9090)"]
+        GeminiAPI["Google Gemini AI<br/>(Intelligence / Search)"]
+    end
+
+    %% 통신 흐름
+    FlutterApp -- "1. POST /chat<br/>(Target: 127.0.0.1:9090)" --> SDBDaemon
+    SDBDaemon -- "2. USB Tunnel<br/>(SDB Reverse Packet)" --> SDBServer
+    SDBServer -- "3. Internal Relay" --> FastAPIServer
+    FastAPIServer -- "4. AI Logic / Grounding" --> GeminiAPI
+    FastAPIServer -- "5. Action Command<br/>(sdb shell execute)" --> SDBServer
+    SDBServer -- "6. Device Control" --> TizenDevice
+```
+
+---
+
+### 기기 제어 시퀀스 (Device Control Sequence)
+사용자가 기기 제어(예: 볼륨 조절)를 요청했을 때 시스템 내부에서 발생하는 상세 흐름입니다.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as 사용자
+    participant App as Tizen App (Flutter)
+    participant PC as PC Server (FastAPI)
+    participant Gemini as Gemini 2.5 Flash
+    participant Device as Tizen Device (OS)
+
+    User->>App: "거실 볼륨 20으로 설정해"
+    App->>PC: HTTP POST /chat {message: "..."} (via SDB Tunnel)
+    
+    Note over PC: 1. Router Agent 의도 파악
+    PC->>Gemini: Task Classification
+    Gemini-->>PC: Identified Task: device_control_a2ui
+    
+    Note over PC: 2. Device Worker 도구 호출 생성
+    PC->>Gemini: Function Calling Generation
+    Gemini-->>PC: tool: homeVolume(volume=20)
+    
+    Note over PC: 3. 실제 기기 제어 수행 (SDB Shell)
+    PC->>Device: sdb -s <serial> shell action-tool execute {...}
+    Device-->>PC: Execution Result: {"status":"success", ...}
+    
+    Note over PC: 4. 결과 요약 및 UI 생성
+    PC->>Gemini: Result Summarization & A2UI Generation
+    Gemini-->>PC: text: "볼륨을 20으로 조정했습니다." + UI JSON
+    
+    PC-->>App: HTTP 200 OK {text: "...", ui_code: "..."}
+    App->>User: 텍스트 응답 출력 및 A2UI 화면 렌더링
+```
+
 ## 요구 사항
 - Ubuntu 24.04 (또는 호환 리눅스 환경)
 - Python 3.12+
