@@ -3,35 +3,35 @@
 Tizen 기기를 효율적으로 제어하기 위한 인텔리전트 에이전트 서버입니다. FastAPI와 Gemini 2.5 Flash의 Function Calling 기능을 사용하여 자연어로 Tizen 기기를 제어하고, 결과를 **A2UI(Agent-to-UI) v0.9 규격의 JSON**으로 응답받을 수 있습니다.
 
 ## 주요 기능
-- **동적 도구 로드**: 서버 시작 시 Tizen 기기에서 사용 가능한 모든 액션(`action-tool list-actions`)을 자동으로 감지하여 LLM 도구로 등록합니다.
-- **다재다능한 AI 어시스턴트**: 기기 제어뿐만 아니라 일반적인 질문이나 일상 대화에도 자연스럽게 응답합니다.
-- **자연어 기기 제어**: "와이파이 켜줘", "볼륨 조절해줘" 등 일상적인 명령어로 Tizen 기기 제어 가능
-- **GenUI (A2UI)**: 기기 제어 성공 시 또는 디자인 요청 시 상태를 시각적으로 보여주는 A2UI v0.9 규격 JSON 반환
-- **SDB 자동화**: 서버 시작 시 `sdb reverse` 명령어를 자동으로 실행하여 통신 환경 설정
-- **Router-Worker 아키텍처**: 사용자의 요청을 분석하는 Router와 목적별 전담 Worker(검색, 제어, 디자인)로 구성된 고성능 에이전트 엔진
+- **LangGraph 기반 오케스트레이션**: 사용자의 의도를 분석하고 태스크별 워커(Worker)를 유연하게 연결하는 StateGraph 구조 채택
+- **Router-Worker 아키텍처**: 의도 분석(Router), 대화(Chat), 검색(Search), 제어(Device), 디자인(UI) 전담 워커가 병렬/순차적으로 협업
+- **동적 도구 로드**: 서버 시작 시 Tizen 기기에서 사용 가능한 모든 액션(`action-tool list-actions`)을 자동으로 감지하여 LLM 도구로 등록
+- **GenUI (A2UI)**: 기기 제어 성공 시 또는 디자인 요청 시 상태를 시각적으로 보여주는 **A2UI v0.9** 규격 JSON 반환
+- **SDB 자동화**: 서버 시작 시 `sdb reverse`를 자동으로 설정하여 Tizen 기기-서버 간 통신 환경 구축
+- **Google Search Grounding**: 최신 정보가 필요한 경우 Google 검색 엔진을 직접 활용하여 신뢰도 높은 답변 제공
 
 ## 에이전트 아키텍처
 
-본 에이전트는 효율적인 작업 분배와 정확한 응답을 위해 **2단계 라우터-워커(Router-Worker)** 구조로 동작합니다.
+본 에이전트는 **LangGraph StateGraph**를 기반으로 설계되었으며, 복잡한 사용자 의도를 분석하여 최적의 워커 노드(Worker Node)를 병렬 또는 순차적으로 실행합니다.
 
+### 🏗️ 그래프 구조 (StateGraph)
 ```mermaid
 graph TD
-    User([사용자 요청]) --> Router{Router Agent<br/>Gemini 2.5 Flash}
+    START([🚀 START]) --> router_node["🧭 Router Node\n(의도 분석 & Task 결정)"]
     
-    Router -- 의도 분석/태스크 분류 --> Tasks{Task Queue}
+    router_node -->|general_chat| chat_worker["💬 Chat Worker"]
+    router_node -->|search| search_worker["🔍 Search Worker"]
+    router_node -->|device_control| device_worker["📱 Device Worker"]
+    router_node -->|draw_a2ui| a2ui_worker["🎨 A2UI Worker"]
     
-    Tasks -- "general_chat" --> ChatAg[Chat Worker<br/>일상 대화 및 인사]
-    Tasks -- "search" --> SearchAg[Search Worker<br/>구글 검색 기반 최신 정보]
-    Tasks -- "device_control_a2ui" --> DeviceAg[Device Worker<br/>Tizen 제어 및 제어 UI 생성]
-    Tasks -- "draw_a2ui" --> DrawAg[A2UI Worker<br/>UI/UX 디자인 전담]
+    chat_worker --> reconstructor["🔧 Reconstructor\n(결과 통합 & UI 정리)"]
+    search_worker --> reconstructor
+    device_worker --> reconstructor
+    a2ui_worker --> reconstructor
     
-    ChatAg --> Aggregator[결과 통합기]
-    SearchAg --> Aggregator
-    DeviceAg --> Aggregator
-    DrawAg --> Aggregator
-    
-    Aggregator --> FinalResponse([최종 텍스트 + A2UI 코드])
+    reconstructor --> END([✅ END])
 ```
+
 
 ### 동작 순서
 1. **1단계 (Router)**: 사용자의 메시지가 입력되면 **Router Agent**가 요청의 의도를 분석하여 `general_chat`, `search`, `device_control_a2ui`, `draw_a2ui` 중 필요한 태스크를 결정합니다.
@@ -73,40 +73,24 @@ graph LR
 
 ---
 
-### 기기 제어 시퀀스 (Device Control Sequence)
-사용자가 기기 제어(예: 볼륨 조절)를 요청했을 때 시스템 내부에서 발생하는 상세 흐름입니다.
+## 프로젝트 구조
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant User as 사용자
-    participant App as Tizen App (Flutter)
-    participant PC as PC Server (FastAPI)
-    participant Gemini as Gemini 2.5 Flash
-    participant Device as Tizen Device (OS)
+역할 기반으로 코드를 모듈화하여 유지보수성을 높였습니다.
 
-    User->>App: "거실 볼륨 20으로 설정해"
-    App->>PC: HTTP POST /chat {message: "..."} (via SDB Tunnel)
-    
-    Note over PC: 1. Router Agent 의도 파악
-    PC->>Gemini: Task Classification
-    Gemini-->>PC: Identified Task: device_control_a2ui
-    
-    Note over PC: 2. Device Worker 도구 호출 생성
-    PC->>Gemini: Function Calling Generation
-    Gemini-->>PC: tool: homeVolume(volume=20)
-    
-    Note over PC: 3. 실제 기기 제어 수행 (SDB Shell)
-    PC->>Device: sdb -s <serial> shell action-tool execute {...}
-    Device-->>PC: Execution Result: {"status":"success", ...}
-    
-    Note over PC: 4. 결과 요약 및 UI 생성
-    PC->>Gemini: Result Summarization & A2UI Generation
-    Gemini-->>PC: text: "볼륨을 20으로 조정했습니다." + UI JSON
-    
-    PC-->>App: HTTP 200 OK {text: "...", ui_code: "..."}
-    App->>User: 텍스트 응답 출력 및 A2UI 화면 렌더링
+```text
+tizen-home-agent/
+├── main.py              # FastAPI 진입점 및 API 엔드포인트
+├── config.py            # 전역 설정 및 Pydantic 데이터 모델
+├── graph/               # LangGraph 관련 로직 (StateGraph)
+│   ├── state.py         # AgentState 정의
+│   ├── nodes.py         # 모든 Worker/Router 노드 함수
+│   └── builder.py       # 그래프 조립 및 컴파일
+└── utils/               # 유틸리티 모듈
+    ├── sdb_handler.py   # Tizen SDB 연동 유틸리티
+    └── helpers.py       # 공용 도우미 함수 (JSON 추출 등)
 ```
+
+---
 
 ## 요구 사항
 - Ubuntu 24.04 (또는 호환 리눅스 환경)
@@ -207,7 +191,7 @@ Tizen 기기에서 직접 서버로 데이터를 전송할 때 사용합니다.
 
 ```bash
 # 1. 가상환경 활성화 (필요 시)
-source venv/bin/activate
+ss
 
 # 2. 대화형 모드 시작 (연속 대화 가능)
 python test.py
