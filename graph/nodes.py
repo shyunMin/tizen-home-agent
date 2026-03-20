@@ -67,7 +67,7 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
         "사용자 입력에 따라 아래 Task 종류 중 가장 적절한 것들을 선택해.\n"
         "1. general_chat: 단순 인사, 일상 대화, 간단한 질문 (예: '안녕', '넌 누구니?')\n"
         "2. search: 최신 정보, 날씨, 뉴스 등 실시간 검색이 필요한 경우 (예: '오늘 서울 날씨?')\n"
-        "3. device_control_a2ui: Tizen 기기 제어 명령 (예: '볼륨 높여줘', 'WiFi 설정 열어')\n"
+        "3. device_control: Tizen 기기 제어 명령만 수행 (성공/실패 여부만 확인, 예: '볼륨 높여줘', 'WiFi 설정 열어')\n"
         "4. draw_a2ui: UI 레이아웃·화면 생성 요청 (예: '대시보드 그려줘', '날씨 카드 만들어')\n"
         "여러 Task가 필요하면 모두 포함하고 intent를 'complex'로 설정해."
     )
@@ -147,14 +147,9 @@ async def device_worker_node(state: AgentState) -> Dict[str, Any]:
     tizen_tools = build_tizen_langchain_tools()
 
     system_prompt = (
-        "당신은 Tizen 기기 제어 및 A2UI 생성 전문가입니다. "
-        "사용자의 명령에 따라 적절한 Tizen 도구를 호출하고 결과를 요약하세요. "
-        "결과를 시각화하는 A2UI v0.9 JSON 코드도 생성하세요.\n\n"
-        "[A2UI v0.9 규격]\n"
-        "- version: 'v0.9' 포함\n"
-        "- createSurface / updateComponents 메시지 구조\n"
-        "- 컴포넌트: {\"id\": \"root\", \"component\": {\"Column\": {\"children\": [...]}}}\n\n"
-        "최종 응답에는 텍스트 요약과 함께 ```json ... ``` 블록으로 A2UI 코드를 포함하세요."
+        "당신은 Tizen 기기 제어 전문가입니다. "
+        "사용자의 명령에 따라 적절한 Tizen 도구를 호출하고 그 실행 결과(성공 또는 실패 여부)를 짧게 요약하세요. "
+        "별도의 UI 코드나 부가 설명 없이, 기기 제어 수행 상태만 알려주면 됩니다."
     )
 
     if tizen_tools:
@@ -191,15 +186,9 @@ async def device_worker_node(state: AgentState) -> Dict[str, Any]:
     else:
         final_text = str(raw_content) if raw_content is not None else ""
 
-    ui_code = extract_json(final_text)
-    try:
-        ui_data = json.loads(ui_code)
-        if isinstance(ui_data, dict) and "messages" in ui_data:
-            ui_code = json.dumps(ui_data["messages"], ensure_ascii=False)
-    except Exception:
-        pass
+    # A2UI 생성 중단: 기기 제어 결과만 텍스트로 반환
 
-    result: WorkerResult = {"task": "device_control_a2ui", "text": final_text, "ui_code": ui_code}
+    result: WorkerResult = {"task": "device_control", "text": final_text, "ui_code": ""}
     existing = cast(List[WorkerResult], state.get("worker_results", []))
     return {"worker_results": existing + [result]}
 

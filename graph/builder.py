@@ -17,7 +17,7 @@ def route_to_workers(state: AgentState):
     task_node_map = {
         "general_chat": "chat_worker_node",
         "search": "search_worker_node",
-        "device_control_a2ui": "device_worker_node",
+        "device_control": "device_worker_node",
         "draw_a2ui": "a2ui_worker_node",
     }
     targets = [task_node_map.get(t, "chat_worker_node") for t in tasks]
