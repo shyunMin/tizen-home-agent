@@ -6,6 +6,7 @@ from graph.nodes import (
     search_worker_node,
     device_worker_node,
     a2ui_worker_node,
+    search_presenter_worker_node,
     reconstructor_node,
 )
 
@@ -20,7 +21,13 @@ def route_to_workers(state: AgentState):
         "device_control": "device_worker_node",
         "draw_a2ui": "a2ui_worker_node",
     }
-    targets = [task_node_map.get(t, "chat_worker_node") for t in tasks]
+    targets = []
+    for t in tasks:
+        if t == "search":
+            targets.extend(["search_worker_node", "search_presenter_worker_node"])
+        else:
+            targets.append(task_node_map.get(t, "chat_worker_node"))
+            
     seen = set()
     unique_targets = []
     for t in targets:
@@ -40,6 +47,7 @@ def build_graph() -> StateGraph:
     graph.add_node("router_node", router_node)
     graph.add_node("chat_worker_node", chat_worker_node)
     graph.add_node("search_worker_node", search_worker_node)
+    graph.add_node("search_presenter_worker_node", search_presenter_worker_node)
     graph.add_node("device_worker_node", device_worker_node)
     graph.add_node("a2ui_worker_node", a2ui_worker_node)
     graph.add_node("reconstructor_node", reconstructor_node)
@@ -52,6 +60,7 @@ def build_graph() -> StateGraph:
         {
             "chat_worker_node": "chat_worker_node",
             "search_worker_node": "search_worker_node",
+            "search_presenter_worker_node": "search_presenter_worker_node",
             "device_worker_node": "device_worker_node",
             "a2ui_worker_node": "a2ui_worker_node",
         },
@@ -60,6 +69,7 @@ def build_graph() -> StateGraph:
     for worker in [
         "chat_worker_node",
         "search_worker_node",
+        "search_presenter_worker_node",
         "device_worker_node",
         "a2ui_worker_node",
     ]:
@@ -80,10 +90,12 @@ graph TD
     START([🚀 START]) --> router_node["🧭 Router Node"]
     router_node --> chat_worker_node["💬 Chat Worker"]
     router_node --> search_worker_node["🔍 Search Worker"]
+    router_node --> search_presenter_worker_node["📺 Search Presenter"]
     router_node --> device_worker_node["📱 Device Worker"]
     router_node --> a2ui_worker_node["🎨 A2UI Worker"]
     chat_worker_node --> reconstructor_node["🔧 Reconstructor"]
     search_worker_node --> reconstructor_node
+    search_presenter_worker_node --> reconstructor_node
     device_worker_node --> reconstructor_node
     a2ui_worker_node --> reconstructor_node
     reconstructor_node --> END([✅ END])

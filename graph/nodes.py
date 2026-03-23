@@ -1,12 +1,13 @@
 import os
 import json
+import subprocess
 from typing import List, Dict, Any, cast
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 import config
 from graph.state import AgentState, WorkerResult
-from utils.sdb_handler import execute_tizen_action
+from utils.sdb_handler import execute_tizen_action, get_device_serial
 from utils.helpers import extract_json
 
 # ---------------------------------------------------------------------------
@@ -219,6 +220,56 @@ async def a2ui_worker_node(state: AgentState) -> Dict[str, Any]:
     except Exception:
         pass
     result: WorkerResult = {"task": "draw_a2ui", "text": "요청하신 디자인을 A2UI 규격으로 생성했습니다.", "ui_code": ui_code}
+    existing = cast(List[WorkerResult], state.get("worker_results", []))
+    return {"worker_results": existing + [result]}
+
+async def search_presenter_worker_node(state: AgentState) -> Dict[str, Any]:
+    """Search Presenter Worker Node: 검색 결과를 보여주는 프레젠터."""
+    print("[search_presenter_worker_node] Running search presenter...")
+    last_human = next(
+        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
+        "",
+    )
+
+    llm = make_llm(
+        "gemini-2.5-flash",
+        tools="google_search_retrieval",
+    )
+    system_prompt = (
+        "너는 검색 결과를 분석하여 가장 관련도가 높은 웹페이지의 URL을 추출하는 프레젠터야. "
+        "사용자의 검색 의도를 파악하고, 구글 검색을 통해 알아낸 가장 적합한 단일 URL만 JSON 형식으로 반환해. "
+        "응답은 반드시 `{\"url\": \"https://...\"}` 형태의 JSON이어야 해."
+    )
+    prompt = f"사용자 요청: {last_human}"
+    try:
+        response = await llm.ainvoke([("system", system_prompt), ("human", prompt)])
+        try:
+            parsed = json.loads(extract_json(response.content))
+            target_url = parsed.get("url", "")
+        except Exception:
+            # fallback if not valid json
+            target_url = ""
+            
+        if target_url:
+            print(f"[search_presenter_worker_node] Found URL: {target_url}")
+            serial = get_device_serial()
+            cmd = ["sdb"]
+            if serial:
+                cmd.extend(["-s", serial])
+            shell_cmd = f"app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ {target_url}"
+            cmd.extend(["shell", shell_cmd])
+            
+            print(f"[search_presenter_worker_node] Executing: {' '.join(cmd)}")
+            subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=10)
+            text_result = f"검색 결과를 TV 화면에 띄웠습니다. (URL: {target_url})"
+        else:
+            text_result = "적절한 검색 결과 URL을 찾지 못해 화면에 띄우지 못했습니다."
+            
+    except Exception as e:
+        print(f"[search_presenter_worker_node] Error: {e}")
+        text_result = "검색 결과를 화면에 표시하는 중 오류가 발생했습니다."
+
+    result: WorkerResult = {"task": "search_presenter", "text": text_result, "ui_code": ""}
     existing = cast(List[WorkerResult], state.get("worker_results", []))
     return {"worker_results": existing + [result]}
 
