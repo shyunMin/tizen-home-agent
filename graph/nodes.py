@@ -2,6 +2,7 @@ import os
 import json
 import subprocess
 from typing import List, Dict, Any, cast
+import requests
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -71,6 +72,7 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
         "3. device_control: Tizen 기기 제어 명령만 수행 (성공/실패 여부만 확인, 예: '볼륨 높여줘', 'WiFi 설정 열어')\n"
         "4. draw_a2ui: UI 레이아웃·화면 생성 요청 (예: '대시보드 그려줘', '날씨 카드 만들어')\n"
         "5. briefing: 최신 정보를 검색하여 깔끔한 카드 뉴스 형태의 HTML로 브리핑하고 기기에 전송/실행을 요청하는 경우 (예: '오늘 주요 뉴스 브리핑해줘', '맛집 정보 카드 뉴스로 보여줘')\n"
+        "6. app_deploy: 사용자의 앱 개발 요청을 받아 외부 API를 통해 코드를 생성하고, 결과물을 Tizen 장치에 자동으로 배포/압축 해제하는 경우 (예: '앱 만들어줘', '이러이러한 앱을 생성하고 배포해줘')\n"
         "여러 Task가 필요하면 모두 포함하고 intent를 'complex'로 설정해."
     )
 
@@ -161,12 +163,12 @@ async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
         if serial:
             cmd_base.extend(["-s", serial])
             
-        push_cmd = cmd_base + ["push", filepath, "/opt/usr/home/owner/media/tizen_briefing.html"]
+        push_cmd = cmd_base + ["push", filepath, "/opt/usr/share/home/tizen_briefing.html"]
         print(f"[briefing_worker_node] Push Executing: {' '.join(push_cmd)}")
         subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=15)
         
         # 5. 앱 실행 (Launch)
-        launch_cmd = cmd_base + ["shell", "app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file:///opt/usr/home/owner/media/tizen_briefing.html"]
+        launch_cmd = cmd_base + ["shell", "app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file:///opt/usr/share/home/tizen_briefing.html"]
         print(f"[briefing_worker_node] Launch Executing: {' '.join(launch_cmd)}")
         subprocess.run(launch_cmd, capture_output=True, text=True, check=True, timeout=10)
         
@@ -338,6 +340,86 @@ async def search_presenter_worker_node(state: AgentState) -> Dict[str, Any]:
     result: WorkerResult = {"task": "search_presenter", "text": text_result, "ui_code": ""}
     existing = cast(List[WorkerResult], state.get("worker_results", []))
     return {"worker_results": existing + [result]}
+
+async def app_deploy_worker_node(state: AgentState) -> Dict[str, Any]:
+    """App Generation & Remote Deployment Worker Node."""
+    print("[app_deploy_worker_node] Running app generation and deployment...")
+    last_human = next(
+        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
+        "",
+    )
+
+    cmd_base = ["sdb"]
+    serial = get_device_serial()
+    if serial:
+        cmd_base.extend(["-s", serial])
+
+    # 1. API 호출 (Code Generation)
+    api_url = "http://sabi.sraisys.com/v1/code/complete"
+    payload = {"prompt": last_human, "message": last_human}
+    text_result = ""
+
+    print("[app_deploy_worker_node] API 서버에서 코드를 생성 중입니다...")
+    try:
+        response = requests.post(api_url, json=payload, timeout=60)
+        response.raise_for_status()
+        res_json = response.json()
+
+        # JSON 응답에서 파일 다운로드 주소 추출
+        download_url = None
+        for key in ["url", "download_url", "file_url", "link"]:
+            if key in res_json:
+                download_url = res_json[key]
+                break
+        
+        if not download_url:
+            import re
+            urls = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', json.dumps(res_json))
+            if urls:
+                download_url = urls[0]
+
+        if not download_url:
+            raise ValueError("API 응답에서 파일 다운로드 주소를 찾을 수 없습니다.")
+
+        # 2. 파일 다운로드 및 서버 임시 저장
+        # URL에서 파일명 추출
+        filename = download_url.split("/")[-1]
+        if not filename or "?" in filename:
+            filename = "generated_app.zip"
+
+        tmp_dir = "/tmp/tizen_apps"
+        os.makedirs(tmp_dir, exist_ok=True)
+        local_filepath = os.path.join(tmp_dir, filename)
+
+        print(f"[app_deploy_worker_node] 파일 다운로드를 시작합니다: {download_url}")
+        file_res = requests.get(download_url, timeout=30)
+        file_res.raise_for_status()
+        with open(local_filepath, "wb") as f:
+            f.write(file_res.content)
+
+        # 3. SDB 전송 (Push)
+        remote_filepath = f"/opt/usr/share/home/{filename}"
+        push_cmd = cmd_base + ["push", local_filepath, remote_filepath]
+        print(f"[app_deploy_worker_node] 파일 전송을 시작합니다: {' '.join(push_cmd)}")
+        push_proc = subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=30)
+
+        # 4. 원격 압축 해제 (Unzip)
+        print("[app_deploy_worker_node] 기기에 전송된 파일의 압축을 해제합니다...")
+        unzip_cmd = cmd_base + ["shell", "unzip", "-o", remote_filepath, "-d", "/opt/usr/share/home/"]
+        print(f"[app_deploy_worker_node] 원격 압축 해제를 시작합니다: {' '.join(unzip_cmd)}")
+        unzip_proc = subprocess.run(unzip_cmd, capture_output=True, text=True, check=True, timeout=30)
+
+        text_result = (
+            "API 서버에서 코드를 생성하여 파일 다운로드 및 전송을 완료했습니다.\n"
+            "앱 배포 및 압축 해제가 완료되었습니다.\n"
+            "설치 경로: /opt/usr/share/home/"
+        )
+    except Exception as e:
+        print(f"[app_deploy_worker_node] Error: {e}")
+        text_result = f"앱 배포 중 에러가 발생했습니다: {e}"
+
+    result: WorkerResult = {"task": "app_deploy", "text": text_result, "ui_code": ""}
+    return {"worker_results": [result]}
 
 async def reconstructor_node(state: AgentState) -> Dict[str, Any]:
     """Reconstructor Node."""

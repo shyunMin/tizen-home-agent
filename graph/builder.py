@@ -7,7 +7,9 @@ from graph.nodes import (
     device_worker_node,
     a2ui_worker_node,
     search_presenter_worker_node,
+    search_presenter_worker_node,
     briefing_worker_node,
+    app_deploy_worker_node,
     reconstructor_node,
 )
 
@@ -22,6 +24,7 @@ def route_to_workers(state: AgentState):
         "device_control": "device_worker_node",
         "draw_a2ui": "a2ui_worker_node",
         "briefing": "briefing_worker_node",
+        "app_deploy": "app_deploy_worker_node",
     }
     targets = []
     for t in tasks:
@@ -51,6 +54,7 @@ def build_graph() -> StateGraph:
     graph.add_node("search_worker_node", search_worker_node)
     graph.add_node("search_presenter_worker_node", search_presenter_worker_node)
     graph.add_node("briefing_worker_node", briefing_worker_node)
+    graph.add_node("app_deploy_worker_node", app_deploy_worker_node)
     graph.add_node("device_worker_node", device_worker_node)
     graph.add_node("a2ui_worker_node", a2ui_worker_node)
     graph.add_node("reconstructor_node", reconstructor_node)
@@ -65,6 +69,7 @@ def build_graph() -> StateGraph:
             "search_worker_node": "search_worker_node",
             "search_presenter_worker_node": "search_presenter_worker_node",
             "briefing_worker_node": "briefing_worker_node",
+            "app_deploy_worker_node": "app_deploy_worker_node",
             "device_worker_node": "device_worker_node",
             "a2ui_worker_node": "a2ui_worker_node",
         },
@@ -75,6 +80,7 @@ def build_graph() -> StateGraph:
         "search_worker_node",
         "search_presenter_worker_node",
         "briefing_worker_node",
+        "app_deploy_worker_node",
         "device_worker_node",
         "a2ui_worker_node",
     ]:
@@ -97,12 +103,14 @@ graph TD
     router_node --> search_worker_node["🔍 Search Worker"]
     router_node --> search_presenter_worker_node["📺 Search Presenter"]
     router_node --> briefing_worker_node["📰 Briefing Worker"]
+    router_node --> app_deploy_worker_node["📦 App Deploy Worker"]
     router_node --> device_worker_node["📱 Device Worker"]
     router_node --> a2ui_worker_node["🎨 A2UI Worker"]
     chat_worker_node --> reconstructor_node["🔧 Reconstructor"]
     search_worker_node --> reconstructor_node
     search_presenter_worker_node --> reconstructor_node
     briefing_worker_node --> reconstructor_node
+    app_deploy_worker_node --> reconstructor_node
     device_worker_node --> reconstructor_node
     a2ui_worker_node --> reconstructor_node
     reconstructor_node --> END([✅ END])
