@@ -57,7 +57,7 @@ class A2uiResponse(BaseModel):
 # Structured Output: Router 결과
 # ---------------------------------------------------------------------------
 
-TaskType = Literal["general_chat", "search", "device_control", "draw_a2ui"]
+TaskType = Literal["general_chat", "search", "device_control", "draw_a2ui", "briefing"]
 
 class RouterResult(BaseModel):
     """Router 노드의 구조화된 출력."""

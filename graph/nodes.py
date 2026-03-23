@@ -70,6 +70,7 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
         "2. search: 최신 정보, 날씨, 뉴스 등 실시간 검색이 필요한 경우 (예: '오늘 서울 날씨?')\n"
         "3. device_control: Tizen 기기 제어 명령만 수행 (성공/실패 여부만 확인, 예: '볼륨 높여줘', 'WiFi 설정 열어')\n"
         "4. draw_a2ui: UI 레이아웃·화면 생성 요청 (예: '대시보드 그려줘', '날씨 카드 만들어')\n"
+        "5. briefing: 최신 정보를 검색하여 깔끔한 카드 뉴스 형태의 HTML로 브리핑하고 기기에 전송/실행을 요청하는 경우 (예: '오늘 주요 뉴스 브리핑해줘', '맛집 정보 카드 뉴스로 보여줘')\n"
         "여러 Task가 필요하면 모두 포함하고 intent를 'complex'로 설정해."
     )
 
@@ -106,6 +107,74 @@ async def chat_worker_node(state: AgentState) -> Dict[str, Any]:
     llm = make_llm("gemini-2.5-flash")
     response = await llm.ainvoke([("system", system_prompt), ("human", last_human)])
     result: WorkerResult = {"task": "general_chat", "text": response.content, "ui_code": ""}
+    return {"worker_results": [result]}
+
+async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
+    """Briefing Worker Node: 정보 브리핑 및 원격 배포 에이전트."""
+    print("[briefing_worker_node] Running briefing and HTML generation...")
+    last_human = next(
+        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
+        "",
+    )
+
+    llm = make_llm(
+        "gemini-2.5-flash",
+        tools="google_search_retrieval",
+    )
+    
+    system_prompt = (
+        "당신은 사용자의 질문에 대해 실시간 정보를 검색하고, 이를 Tizen OS 장치에서 즉시 확인할 수 있는 현대적인 카드 뉴스 스타일의 HTML로 변환하여 배포하는 'Tizen UI/UX 에이전트'입니다.\n\n"
+        "### [수행 단계]\n"
+        "1. 정보 검색: 사용자의 요청 사항에 부합하는 최신 정보를 검색하여 핵심 데이터(제목, 설명, 이미지 URL, 관련 링크)를 최소 3~5개 추출하세요.\n"
+        "2. 맞춤형 HTML 생성: 아래 [디자인 가이드라인]을 준수하여, 검색된 주제에 최적화된 '카드 뷰' 레이아웃의 단일 HTML 코드를 작성하세요. "
+        "응답은 반드시 `<html`로 시작하고 `</html>`로 끝나는 코드여야 하며, 백틱(```html) 등 마크다운 블록 문법을 일절 포함하지 마세요.\n\n"
+        "### [디자인 가이드라인]\n"
+        "- 테마: 다크 모드 기반 (#121212), 화이트/그레이 텍스트 사용.\n"
+        "- 레이아웃: '카드(Card)' 기반 디자인. CSS Grid 또는 Flexbox를 사용하여 항목별로 독립된 카드 형태 구성.\n"
+        "- 시각 요소:\n"
+        "    - 각 카드 상단에 검색된 이미지(썸네일) 배치 (`object-fit: cover` 사용). 이미지가 없을 경우 무미건조한 회색 배경(`background: #333;`)을 사용하세요.\n"
+        "    - 제목(Bold), 요약 내용, 출처 정보를 명확히 구분.\n"
+        "    - 하단에 '자세히 보기' 또는 '링크 이동' 버튼 배치(스타일만 적용된 <a> 태그).\n"
+        "- 애니메이션: 마우스 오버(혹은 포커스) 시 카드가 살짝 커지는(transform: scale(1.05)) 효과 추가 (Tizen TV 리모컨 사용성 고려).\n"
+        "- 텍스트 처리: 텍스트가 너무 길어지면 `display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;` 처리를 하여 카드 크기를 일정하게 유지하세요.\n"
+        "- 모든 콘텐츠는 한국어로 작성합니다."
+    )
+    
+    prompt = f"사용자 요청: {last_human}\n위 요청에 맞춰 최신 정보 검색 후 카드 뉴스 형태의 전체 HTML을 즉시 반환해줘."
+    try:
+        response = await llm.ainvoke([("system", system_prompt), ("human", prompt)])
+        html_code = response.content.strip()
+        
+        if html_code.startswith("```html"):
+            html_code = html_code[7:-3].strip()
+        elif html_code.startswith("```"):
+            html_code = html_code[3:-3].strip()
+            
+        # 3. 서버 임시 저장
+        with open("/tmp/tizen_briefing.html", "w", encoding="utf-8") as f:
+            f.write(html_code)
+            
+        # 4. SDB 전송 (Push)
+        serial = get_device_serial()
+        cmd_base = ["sdb"]
+        if serial:
+            cmd_base.extend(["-s", serial])
+            
+        push_cmd = cmd_base + ["push", "/tmp/tizen_briefing.html", "/opt/usr/home/owner/media/tizen_briefing.html"]
+        print(f"[briefing_worker_node] Push Executing: {' '.join(push_cmd)}")
+        subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=15)
+        
+        # 5. 앱 실행 (Launch)
+        launch_cmd = cmd_base + ["shell", "app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file:///opt/usr/home/owner/media/tizen_briefing.html"]
+        print(f"[briefing_worker_node] Launch Executing: {' '.join(launch_cmd)}")
+        subprocess.run(launch_cmd, capture_output=True, text=True, check=True, timeout=10)
+        
+        text_result = "정보를 검색하여 브리핑 카드 뉴스를 기기 화면에 표시했습니다."
+    except Exception as e:
+        print(f"[briefing_worker_node] Error: {e}")
+        text_result = f"브리핑 화면을 생성하거나 기기에 전송하는 중 오류가 발생했습니다: {e}"
+
+    result: WorkerResult = {"task": "briefing", "text": text_result, "ui_code": ""}
     return {"worker_results": [result]}
 
 async def search_worker_node(state: AgentState) -> Dict[str, Any]:
