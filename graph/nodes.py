@@ -151,7 +151,8 @@ async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
             html_code = html_code[3:-3].strip()
             
         # 3. 서버 임시 저장
-        with open("/tmp/tizen_briefing.html", "w", encoding="utf-8") as f:
+        filepath = "tizen_briefing.html"
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(html_code)
             
         # 4. SDB 전송 (Push)
@@ -160,7 +161,7 @@ async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
         if serial:
             cmd_base.extend(["-s", serial])
             
-        push_cmd = cmd_base + ["push", "/tmp/tizen_briefing.html", "/opt/usr/home/owner/media/tizen_briefing.html"]
+        push_cmd = cmd_base + ["push", filepath, "/opt/usr/home/owner/media/tizen_briefing.html"]
         print(f"[briefing_worker_node] Push Executing: {' '.join(push_cmd)}")
         subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=15)
         
