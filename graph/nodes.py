@@ -106,8 +106,7 @@ async def chat_worker_node(state: AgentState) -> Dict[str, Any]:
     llm = make_llm("gemini-2.5-flash")
     response = await llm.ainvoke([("system", system_prompt), ("human", last_human)])
     result: WorkerResult = {"task": "general_chat", "text": response.content, "ui_code": ""}
-    existing = cast(List[WorkerResult], state.get("worker_results", []))
-    return {"worker_results": existing + [result]}
+    return {"worker_results": [result]}
 
 async def search_worker_node(state: AgentState) -> Dict[str, Any]:
     """Search Worker Node: Google Search 도구를 이용한 실시간 검색."""
@@ -134,8 +133,7 @@ async def search_worker_node(state: AgentState) -> Dict[str, Any]:
         text = response.content
 
     result: WorkerResult = {"task": "search", "text": text, "ui_code": ""}
-    existing = cast(List[WorkerResult], state.get("worker_results", []))
-    return {"worker_results": existing + [result]}
+    return {"worker_results": [result]}
 
 async def device_worker_node(state: AgentState) -> Dict[str, Any]:
     """Device Control Worker Node."""
@@ -190,8 +188,7 @@ async def device_worker_node(state: AgentState) -> Dict[str, Any]:
     # A2UI 생성 중단: 기기 제어 결과만 텍스트로 반환
 
     result: WorkerResult = {"task": "device_control", "text": final_text, "ui_code": ""}
-    existing = cast(List[WorkerResult], state.get("worker_results", []))
-    return {"worker_results": existing + [result]}
+    return {"worker_results": [result]}
 
 async def a2ui_worker_node(state: AgentState) -> Dict[str, Any]:
     """A2UI Draw Worker Node."""
@@ -220,8 +217,7 @@ async def a2ui_worker_node(state: AgentState) -> Dict[str, Any]:
     except Exception:
         pass
     result: WorkerResult = {"task": "draw_a2ui", "text": "요청하신 디자인을 A2UI 규격으로 생성했습니다.", "ui_code": ui_code}
-    existing = cast(List[WorkerResult], state.get("worker_results", []))
-    return {"worker_results": existing + [result]}
+    return {"worker_results": [result]}
 
 async def search_presenter_worker_node(state: AgentState) -> Dict[str, Any]:
     """Search Presenter Worker Node: 검색 결과를 보여주는 프레젠터."""

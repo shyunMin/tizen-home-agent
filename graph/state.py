@@ -1,5 +1,6 @@
 from typing import List, Annotated
 from typing_extensions import TypedDict
+import operator
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
@@ -14,8 +15,8 @@ class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], add_messages]
     # Router가 결정한 task 목록
     tasks: List[str]
-    # 각 워커 결과 누적 리스트
-    worker_results: List[WorkerResult]
+    # 각 워커 결과 누적 리스트 (병렬 Worker를 위해 Reducer 추가)
+    worker_results: Annotated[List[WorkerResult], operator.add]
     # Reconstructor가 생성한 최종 답변
     final_text: str
     # Reconstructor가 생성한 최종 A2UI JSON 문자열
