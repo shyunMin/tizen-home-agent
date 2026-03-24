@@ -3,8 +3,8 @@
 Tizen 기기를 효율적으로 제어하기 위한 인텔리전트 에이전트 서버입니다. FastAPI와 Gemini 2.5 Flash를 사용하여 자연어로 Tizen 기기를 제어하고, 실시간 정보 및 UI 화면을 **순수 HTML 기반의 UI**로 응답받을 수 있습니다.
 
 ## 주요 기능
-- **LangGraph 기반 오케스트레이션**: 사용자의 의도를 분석하고 태스크별 워커(Worker)를 유연하게 연결하는 StateGraph 구조 채택
-- **Router-Worker 아키텍처**: 의도 분석(Router), 대화(Chat), 웹 검색(Search), 제어(Device), HTML 생성 전담 에이전트가 협업
+- **LangGraph 기반 오케스트레이션**: 사용자의 의도를 분석하고 태스크별 에이전트(Agent)를 유연하게 연결하는 StateGraph 구조 채택
+- **Router-Agent 아키텍처**: 의도 분석(Router), 대화(Chat), 웹 검색(Search), 제어(Device), HTML 생성 전담 에이전트가 협업
 - **동적 도구 로드**: 서버 시작 시 Tizen 기기에서 사용 가능한 모든 액션(`action-tool list-actions`)을 자동으로 감지하여 LLM 도구로 등록
 - **웹 기술 기반 UI**: 모든 시각화 결과를 단일 파일 HTML로 생성하여 Tizen 기기에 즉시 배포 및 실행
 - **SDB 자동화**: 서버 시작 시 `sdb reverse`를 자동으로 설정하여 Tizen 기기-서버 간 통신 환경 구축
@@ -12,7 +12,7 @@ Tizen 기기를 효율적으로 제어하기 위한 인텔리전트 에이전트
 
 ## 에이전트 아키텍처
 
-본 에이전트는 **LangGraph StateGraph**를 기반으로 설계되었으며, 복잡한 사용자 의도를 분석하여 최적의 워커 노드(Worker Node)를 병렬 또는 순차적으로 실행합니다.
+본 에이전트는 **LangGraph StateGraph**를 기반으로 설계되었으며, 복잡한 사용자 의도를 분석하여 최적의 에이전트 노드(Agent Node)를 병렬 또는 순차적으로 실행합니다.
 
 ### 🏗️ 그래프 구조 (StateGraph)
 ```mermaid
@@ -48,14 +48,14 @@ graph TD
 
 ### 동작 순서
 1. **1단계 (Router)**: 사용자의 메시지가 입력되면 **Router Agent**가 요청의 의도를 분석하여 `general_chat`, `search`, `device_control`, `draw_a2ui`, `briefing`, `youtube_play` 중 필요한 태스크를 결정합니다.
-2. **2단계 (Worker)**: 분류된 태스크에 따라 6종의 **전담 워커(Worker)**들이 병렬로 실행됩니다.
-    - **Chat Worker**: 인사, 일상 대화 등 외부 정보가 필요 없는 답변을 담당합니다.
+2. **2단계 (Agent)**: 분류된 태스크에 따라 6종의 **전담 에이전트(Agent)**들이 병렬로 실행됩니다.
+    - **Chat Agent**: 인사, 일상 대화 등 외부 정보가 필요 없는 답변을 담당합니다.
     - **Web Search Agent**: 사용자의 의도에 따라 Google 검색으로 최신 정보를 찾고, 관련 웹 페이지를 기기에 즉시 표시합니다.
-    - **Briefing Worker**: 정보를 기기에 카드 뉴스 형태의 전용 HTML로 생성 후 배포하여 표시합니다.
-    - **YouTube Worker**: 요청된 제목의 영상을 검색해 자립형 HTML 플레이어로 만들어 기기에서 자동 재생시킵니다.
-    - **Device Worker**: 실제 Tizen 기기 액션을 수행하고 제어 성공/실패 여부를 반환합니다.
+    - **Briefing Agent**: 정보를 기기에 카드 뉴스 형태의 전용 HTML로 생성 후 배포하여 표시합니다.
+    - **YouTube Agent**: 요청된 제목의 영상을 검색해 자립형 HTML 플레이어로 만들어 기기에서 자동 재생시킵니다.
+    - **Device Agent**: 실제 Tizen 기기 액션을 수행하고 제어 성공/실패 여부를 반환합니다.
     - **HTML 생성 에이전트**: 별도의 도구 호출 없이 창의적인 UI 화면을 순수 HTML 코드로 생성합니다.
-3. **3단계 (Integration)**: 각 워커가 반환한 결과를 통합하여 텍스트 답변과 최종 UI HTML 코드를 클라이언트에 전달합니다.
+3. **3단계 (Integration)**: 각 에이전트가 반환한 결과를 통합하여 텍스트 답변과 최종 UI HTML 코드를 클라이언트에 전달합니다.
 
 ---
 
@@ -98,7 +98,7 @@ sequenceDiagram
     participant App as 📱 Flutter App (Client)
     participant Server as 🚀 FastAPI Server
     participant Router as 🧭 Router Node
-    participant Device as 📱 Device Worker
+    participant Device as 📱 Device Agent
     participant SDB as 🛠️ SDB Handler (Tizen)
     participant Recon as 🔄 결과 통합기
 
@@ -112,7 +112,7 @@ sequenceDiagram
     SDB-->>Device: 제어 결과 리턴 (Success/Fail)
     
     Device-->>Server: WorkerResult 생성 (상태 요약)
-    Server->>Recon: 워커 다중 결과 수합 및 통합 답변/HTML 합성
+    Server->>Recon: 에이전트 다중 결과 수합 및 통합 답변/HTML 합성
     Recon-->>Server: Final Response (Text/HTML Code)
     
     Server-->>App: 최종 결과 반환 (JSON 응답 내 ui_code에 HTML 포함)
@@ -294,23 +294,24 @@ python test.py
 
 ## 주요 테스트 케이스
 
-Router-Worker 아키텍처의 각 워커가 정상적으로 동작하는지 확인할 수 있는 샘플 케이스입니다.
+Router-Agent 아키텍처의 각 에이전트가 정상적으로 동작하는지 확인할 수 있는 샘플 케이스입니다.
 
 | 카테고리 | 테스트 메시지 | 기대 동작 |
 | :--- | :--- | :--- |
-| **일반 대화** | "안녕? 넌 누구니?" | `Chat Worker`가 응답 (검색 없이 일상 대화) |
+| **일반 대화** | "안녕? 넌 누구니?" | `Chat Agent`가 응답 (검색 없이 일상 대화) |
 | **웹 검색** | "오늘 서울 우면동 날씨가 어때?" | `Web Search Agent`가 정보를 검색하고 관련 페이지 URL을 기기 화면에 표시 |
-| **뉴스 브리핑** | "오늘 주요 뉴스 브리핑해줘" | `Briefing Worker`가 최신 뉴스를 조사하여 카드 뉴스 HTML을 만들어 TV에 배포 및 실행 |
-| **기기 제어** | "거실 TV 켜줘" / "볼륨 높여줘" | `Device Worker`가 SDB 명령 후 제어 결과 상태(성공/실패) 반환 |
+| **뉴스 브리핑** | "오늘 주요 뉴스 브리핑해줘" | `Briefing Agent`가 최신 뉴스를 조사하여 카드 뉴스 HTML을 만들어 TV에 배포 및 실행 |
+| **기기 제어** | "거실 TV 켜줘" / "볼륨 높여줘" | `Device Agent`가 SDB 명령 후 제어 결과 상태(성공/실패) 반환 |
 | **HTML 생성** | "영화 예약 화면 하나 그려줘" | `HTML 생성 에이전트`가 도구 없이 단일 HTML 코드 생성 |
-| **복합 요청** | "안녕? 에어컨 켜고 오늘 날씨 알려줘" | `Router`가 2개 이상의 태스크로 분류 후 각 워커의 결과를 통합하여 응답 |
-| **유튜브 검색** | "아이유의 좋은날 유튜브에서 재생해줘" | `YouTube Worker`가 영상을 검색해 플레이 가능한 HTML로 만들고 TV에서 자동 재생 |
+| **복합 요청** | "안녕? 에어컨 켜고 오늘 날씨 알려줘" | `Router`가 2개 이상의 태스크로 분류 후 각 에이전트의 결과를 통합하여 응답 |
+| **유튜브 검색** | "아이유의 좋은날 유튜브에서 재생해줘" | `YouTube Agent`가 영상을 검색해 플레이 가능한 HTML로 만들고 TV에서 자동 재생 |
 
 ## 라이선스
 MIT License
 
 ---
-**마지막 수정 날짜:** 2026-03-24 18:36
+**마지막 수정 날짜:** 2026-03-24 18:38
 
-**수정 사항:** README 전체 문서에서 GenUI 및 A2UI JSON 관련 설명을 제거하고, 현재 6개 에이전트 체계와 HTML UI 반환 중심의 동작 순서로 통일성 있게 업데이트하였습니다.
+**수정 사항:** README 전체에서 'Worker(워커)' 용어를 'Agent(에이전트)'로 통일하여 명칭의 일관성을 확보하였습니다.
+
 
