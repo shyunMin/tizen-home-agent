@@ -184,7 +184,7 @@ async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
         print(f"[briefing_worker_node] Error: {e}")
         text_result = f"브리핑 화면을 생성하거나 기기에 전송하는 중 오류가 발생했습니다: {e}"
 
-    result: WorkerResult = {"task": "briefing", "text": text_result, "ui_code": ""}
+    result: WorkerResult = {"task": "briefing", "text": text_result, "ui_code": html_code if 'html_code' in locals() else ""}
     return {"worker_results": [result]}
 
 async def search_worker_node(state: AgentState) -> Dict[str, Any]:
@@ -420,12 +420,12 @@ async def app_deploy_worker_node(state: AgentState) -> Dict[str, Any]:
         print(f"[app_deploy_worker_node] Error: {e}")
         text_result = f"앱 생성 및 배포 중 오류가 발생했습니다: {e}"
 
-    result: WorkerResult = {"task": "app_deploy", "text": text_result, "ui_code": ""}
+    result: WorkerResult = {"task": "app_deploy", "text": text_result, "ui_code": html_code if 'html_code' in locals() else ""}
     return {"worker_results": [result]}
 
-async def synthesizer_node(state: AgentState) -> Dict[str, Any]:
-    """Synthesizer Node (구 Reconstructor)"""
-    print("[synthesizer_node] Merging worker results...")
+async def html_synthesizer_node(state: AgentState) -> Dict[str, Any]:
+    """HTML Synthesizer Node (구 Synthesizer/Reconstructor): 워커 결과 텍스트 통합 및 순수 HTML 병합"""
+    print("[html_synthesizer_node] Merging worker results...")
     worker_results: List[WorkerResult] = cast(List[WorkerResult], state.get("worker_results", []))
     last_human = next(
         (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
@@ -441,23 +441,22 @@ async def synthesizer_node(state: AgentState) -> Dict[str, Any]:
     else:
         worker_summary = "\n\n".join(f"[{r['task']} 결과]\n{r['text']}" for r in worker_results)
         system_prompt = (
-            "너는 다수의 AI 워커 결과를 통합하는 Synthesizer(결과 통합기)야. "
+            "너는 다수의 AI 워커 결과를 통합하는 결과 통합기야. "
             "아래 각 워커의 결과를 자연스럽게 하나의 답변으로 합쳐줘. "
             "사용자 원래 요청: {last_human}"
         )
         llm = make_llm("gemini-2.5-flash")
         response = await llm.ainvoke([("system", system_prompt), ("human", worker_summary)])
         final_text = response.content
-        all_ui = []
+        
+        # ui_code는 JSON 파싱 없이 순수 HTML들을 그냥 이어 붙입니다.
+        all_html = []
         for r in worker_results:
             if r["ui_code"]:
-                try:
-                    p = json.loads(r["ui_code"])
-                    all_ui.extend(p if isinstance(p, list) else [p])
-                except: pass
-        ui_code = json.dumps(all_ui, ensure_ascii=False) if all_ui else ""
+                all_html.append(r["ui_code"])
+        ui_code = "\n".join(all_html)
 
-    print(f"[synthesizer_node] Final text length: {len(final_text)}")
+    print(f"[html_synthesizer_node] Final text length: {len(final_text)}")
     return {"final_text": final_text, "ui_code": ui_code, "messages": [AIMessage(content=final_text)]}
 
 async def youtube_worker_node(state: AgentState) -> Dict[str, Any]:
@@ -542,7 +541,7 @@ async def youtube_worker_node(state: AgentState) -> Dict[str, Any]:
         print(f"[youtube_worker_node] Error: {e}")
         text_result = f"유튜브 영상 검색 및 재생 중 오류가 발생했습니다: {e}"
 
-    result: WorkerResult = {"task": "youtube_play", "text": text_result, "ui_code": ""}
+    result: WorkerResult = {"task": "youtube_play", "text": text_result, "ui_code": html_code if 'html_code' in locals() else ""}
     return {"worker_results": [result]}
 
 async def genui_worker_node(state: AgentState) -> Dict[str, Any]:
@@ -641,6 +640,6 @@ async def genui_worker_node(state: AgentState) -> Dict[str, Any]:
         print(f"[genui_worker_node] Error: {e}")
         text_result = f"화면 시각화 중 오류가 발생했습니다: {e}"
 
-    result: WorkerResult = {"task": "genui", "text": text_result, "ui_code": ""}
+    result: WorkerResult = {"task": "genui", "text": text_result, "ui_code": final_html if 'final_html' in locals() else ""}
     return {"worker_results": [result]}
 
