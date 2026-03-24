@@ -133,7 +133,7 @@ async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
         "2. 맞춤형 HTML 생성: 아래 [디자인 가이드라인]을 준수하여, 검색된 주제에 최적화된 '카드 뷰' 레이아웃의 단일 HTML 코드를 작성하세요. "
         "응답은 반드시 `<html`로 시작하고 `</html>`로 끝나는 코드여야 하며, 백틱(```html) 등 마크다운 블록 문법을 일절 포함하지 마세요.\n\n"
         "### [디자인 가이드라인]\n"
-        "- 테마: 다크 모드 기반 (#121212), 화이트/그레이 텍스트 사용.\n"
+        "- 테마: 배경색 투명(background-color: transparent) 기반, 화이트/그레이 텍스트 및 카드 배경색 사용.\n"
         "- 레이아웃: '카드(Card)' 기반 디자인. CSS Grid 또는 Flexbox를 사용하여 항목별로 독립된 카드 형태 구성.\n"
         "- 시각 요소:\n"
         "    - 각 카드 상단에 검색된 이미지(썸네일) 배치 (`object-fit: cover` 사용). 이미지가 없을 경우 무미건조한 회색 배경(`background: #333;`)을 사용하세요.\n"
@@ -256,7 +256,7 @@ async def html_gen_worker_node(state: AgentState) -> Dict[str, Any]:
         "당신은 Tizen 기기용 프리미엄 웹 인터페이스를 설계하는 전문 UI/UX 디자이너입니다.\n"
         "사용자의 요청에 따라 현대적이고, 세련되며, 즉시 사용 가능한 단일 HTML/CSS 코드를 작성하세요.\n\n"
         "[디자인 원칙]\n"
-        "- 다크 모드 기반의 고급스러운 색상 팔레트 사용 (#000000, #1A1A1A, #007AFF 등)\n"
+        "- 배경색은 반드시 투명(background-color: transparent)으로 설정하고, 카드나 컴포넌트 단위로 배경색(#1A1A1A 등)을 부여\n"
         "- Glassmorphism, 부드러운 그림자(Box-shadow), 세련된 타이포그래피 활용\n"
         "- Tizen TV/기기 리모컨 사용성을 고려하여 버튼이나 카드 요소가 충분히 크고 명확해야 함\n"
         "- 텍스트 가독성을 위해 적절한 여백(Padding/Margin) 확보\n"
@@ -331,7 +331,7 @@ async def app_deploy_worker_node(state: AgentState) -> Dict[str, Any]:
         "사용자의 요청에 따라 단일 HTML 파일로 작동하는 완성도 높은 웹 앱 코드를 작성하세요.\n\n"
         "[개발 가이드라인]\n"
         "- 모든 HTML, CSS, JavaScript를 하나의 파일에 포함하세요.\n"
-        "- 디자인은 현대적이고 세련되어야 합니다 (Glassmorphism, 다크 모드, 부드러운 애니메이션 등).\n"
+        "- 배경색은 투명(transparent)으로 설정하고, 개별 UI 요소에 디자인 테마를 적용하세요.\n"
         "- Tizen TV/기기 리모컨 사용성을 고려하여 버튼 등의 요소가 충분히 크고 포커스 효과가 있어야 합니다.\n"
         "- 라이브러리는 CDN을 통해 로드할 수 있습니다 (Font Awesome, Google Fonts, Tailwind CSS 등).\n"
         "- 응답은 반드시 <html>로 시작해서 </html>로 끝나는 유효한 HTML 코드만 반환하세요.\n"
@@ -432,7 +432,7 @@ async def youtube_worker_node(state: AgentState) -> Dict[str, Any]:
 <meta charset="utf-8">
 <title>{video_title}</title>
 <style>
-  body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; min-height: 500px; background-color: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; color: white; font-family: sans-serif; }}
+  body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; min-height: 500px; background-color: transparent; overflow: hidden; display: flex; justify-content: center; align-items: center; color: white; font-family: sans-serif; }}
   h1 {{ font-size: 2rem; }}
 </style>
 <script>
@@ -475,7 +475,8 @@ async def genui_worker_node(state: AgentState) -> Dict[str, Any]:
 
         sys_prompt = f"""당신은 Tailwind CSS 기반의 세련된 UI 시각화 컴포넌트 생성기입니다. 
 아래의 Playbook 지침을 엄격하게 따라 애니메이션과 Javascript(인터랙션)가 포함된 완벽한 단일 HTML fragment(body 내부 구조)를 작성하세요.
-절대로 ```html 같은 마크다운 기호 없이 순수 HTML 태그 구조 텍스트만 출력하세요.
+절대로 ```html 같은 마크다운 기호 없이 순수 HTML 태그 구조 텍스트만 출력하세요. 
+배경색은 반드시 투명(transparent)하게 처리하세요.
 
 ---
 {playbook_text}
