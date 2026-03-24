@@ -141,6 +141,7 @@ async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
         "    - 하단에 '자세히 보기' 또는 '링크 이동' 버튼 배치(스타일만 적용된 <a> 태그).\n"
         "- 애니메이션: 마우스 오버(혹은 포커스) 시 카드가 살짝 커지는(transform: scale(1.05)) 효과 추가 (Tizen TV 리모컨 사용성 고려).\n"
         "- 텍스트 처리: 텍스트가 너무 길어지면 `display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;` 처리를 하여 카드 크기를 일정하게 유지하세요.\n"
+        "- 유튜브 특화 기능: 유튜브 영상 추천 요청의 경우, 각 카드의 이미지 영역에 영상 썸네일을 배치하고 클릭 시 해당 유튜브 영상(`youtube.com/watch?v=...`)으로 즉시 이동할 수 있는 버튼을 포함하세요.\n"
         "- 모든 콘텐츠는 한국어로 작성합니다."
     )
     
@@ -428,7 +429,7 @@ async def youtube_worker_node(state: AgentState) -> Dict[str, Any]:
 <meta charset="utf-8">
 <title>{video_title}</title>
 <style>
-  body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; min-height: 400px; background-color: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; color: white; font-family: sans-serif; }}
+  body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; min-height: 500px; background-color: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; color: white; font-family: sans-serif; }}
   h1 {{ font-size: 2rem; }}
 </style>
 <script>
