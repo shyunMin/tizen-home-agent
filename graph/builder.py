@@ -24,7 +24,7 @@ def route_to_workers(state: AgentState):
         "general_chat": "chat_worker_node",
         "search": "search_worker_node",
         "device_control": "device_worker_node",
-        "draw_a2ui": "a2ui_worker_node",
+        "draw_ui": "a2ui_worker_node",
         "briefing": "briefing_worker_node",
         "app_deploy": "app_deploy_worker_node",
         "youtube_play": "youtube_worker_node",

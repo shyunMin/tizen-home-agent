@@ -47,7 +47,7 @@ graph TD
 
 
 ### 동작 순서
-1. **1단계 (Router)**: 사용자의 메시지가 입력되면 **오케스트레이터 (Orchestrator)**가 요청의 의도를 분석하여 `general_chat`, `search`, `device_control`, `draw_a2ui`, `briefing`, `youtube_play` 중 필요한 태스크를 결정합니다.
+1. **1단계 (Router)**: 사용자의 메시지가 입력되면 **오케스트레이터 (Orchestrator)**가 요청의 의도를 분석하여 `general_chat`, `search`, `device_control`, `draw_ui`, `briefing`, `youtube_play` 중 필요한 태스크를 결정합니다.
 2. **2단계 (Agent)**: 분류된 태스크에 따라 6종의 **전담 에이전트(Agent)**들이 병렬로 실행됩니다.
     - **대화 에이전트 (ChatAgent)**: 인사, 일상 대화 등 외부 정보가 필요 없는 답변을 담당합니다.
     - **웹 검색 에이전트 (WebSearchAgent)**: 사용자의 의도에 따라 Google 검색으로 최신 정보를 찾고, 관련 웹 페이지를 기기에 즉시 표시합니다.
@@ -310,9 +310,10 @@ Router-Agent 아키텍처의 각 에이전트가 정상적으로 동작하는지
 MIT License
 
 ---
-**마지막 수정 날짜:** 2026-03-24 18:43
+**마지막 수정 날짜:** 2026-03-24 18:45
 
-**수정 사항:** 동작 순서의 에이전트 명칭을 아키텍처 다이어그램에서 사용된 한국어 명칭 및 ID와 동일하게 업데이트하여 일관성을 높였습니다.
+**수정 사항:** 시스템 전반에서 `draw_a2ui` 태스크 명칭을 `draw_ui`로 변경하였습니다.
+
 
 
 

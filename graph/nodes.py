@@ -70,7 +70,7 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
         "1. general_chat: 단순 인사, 일상 대화, 간단한 질문 (예: '안녕', '넌 누구니?')\n"
         "2. search: 최신 정보, 날씨, 뉴스 등 실시간 검색이 필요한 경우 (예: '오늘 서울 날씨?')\n"
         "3. device_control: Tizen 기기 제어 명령만 수행 (성공/실패 여부만 확인, 예: '볼륨 높여줘', 'WiFi 설정 열어')\n"
-        "4. draw_a2ui: UI 레이아웃·화면 생성 요청 (예: '대시보드 그려줘', '날씨 카드 만들어')\n"
+        "4. draw_ui: UI 레이아웃·화면 생성 요청 (예: '대시보드 그려줘', '날씨 카드 만들어')\n"
         "5. briefing: 최신 정보를 검색하여 깔끔한 카드 뉴스 형태의 HTML로 브리핑하고 기기에 전송/실행을 요청하는 경우 (예: '오늘 주요 뉴스 브리핑해줘', '맛집 정보 카드 뉴스로 보여줘')\n"
         "6. app_deploy: 사용자의 요청에 따라 Tizen용 단일 파일 HTML 앱을 직접 생성하고, 결과물을 Tizen 장치에 실시간 배포/실행하는 경우 (예: '계산기 앱 만들어줘', '게임 만들어줘')\n"
         "7. youtube_play: 사용자가 유튜브에서 특정 영상을 시청/재생하고자 요청하는 경우 (예: '아이유 노래 유튜브에서 틀어줘', '침착맨 영상 재생해줘')\n"
@@ -295,7 +295,7 @@ async def a2ui_worker_node(state: AgentState) -> Dict[str, Any]:
             ui_code = json.dumps(ui_data["messages"], ensure_ascii=False)
     except Exception:
         pass
-    result: WorkerResult = {"task": "draw_a2ui", "text": "요청하신 디자인을 A2UI 규격으로 생성했습니다.", "ui_code": ui_code}
+    result: WorkerResult = {"task": "draw_ui", "text": "요청하신 디자인을 HTML로 생성했습니다.", "ui_code": ui_code}
     return {"worker_results": [result]}
 
 async def search_presenter_worker_node(state: AgentState) -> Dict[str, Any]:
