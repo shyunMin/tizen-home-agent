@@ -5,7 +5,7 @@ from graph.nodes import (
     chat_worker_node,
     search_worker_node,
     device_worker_node,
-    a2ui_worker_node,
+    html_gen_worker_node,
     search_presenter_worker_node,
     search_presenter_worker_node,
     briefing_worker_node,
@@ -24,7 +24,7 @@ def route_to_workers(state: AgentState):
         "general_chat": "chat_worker_node",
         "search": "search_worker_node",
         "device_control": "device_worker_node",
-        "draw_ui": "a2ui_worker_node",
+        "draw_ui": "html_gen_worker_node",
         "briefing": "briefing_worker_node",
         "app_deploy": "app_deploy_worker_node",
         "youtube_play": "youtube_worker_node",
@@ -62,7 +62,7 @@ def build_graph() -> StateGraph:
     graph.add_node("youtube_worker_node", youtube_worker_node)
     graph.add_node("genui_worker_node", genui_worker_node)
     graph.add_node("device_worker_node", device_worker_node)
-    graph.add_node("a2ui_worker_node", a2ui_worker_node)
+    graph.add_node("html_gen_worker_node", html_gen_worker_node)
     graph.add_node("html_synthesizer_node", html_synthesizer_node)
 
     graph.add_edge(START, "router_node")
@@ -79,7 +79,7 @@ def build_graph() -> StateGraph:
             "youtube_worker_node": "youtube_worker_node",
             "genui_worker_node": "genui_worker_node",
             "device_worker_node": "device_worker_node",
-            "a2ui_worker_node": "a2ui_worker_node",
+            "html_gen_worker_node": "html_gen_worker_node",
         },
     )
 
@@ -92,7 +92,7 @@ def build_graph() -> StateGraph:
         "youtube_worker_node",
         "genui_worker_node",
         "device_worker_node",
-        "a2ui_worker_node",
+        "html_gen_worker_node",
     ]:
         graph.add_edge(worker, "html_synthesizer_node")
 
@@ -117,7 +117,7 @@ graph TD
     router_node --> youtube_worker_node["▶️ YouTube Worker"]
     router_node --> genui_worker_node["✨ GenUI Worker"]
     router_node --> device_worker_node["📱 Device Worker"]
-    router_node --> a2ui_worker_node["🎨 A2UI Worker"]
+    router_node --> html_gen_worker_node["🎨 HTML Gen Agent"]
     chat_worker_node --> html_synthesizer_node["🔄 HTML Synthesizer"]
     search_worker_node --> html_synthesizer_node
     search_presenter_worker_node --> html_synthesizer_node
@@ -126,6 +126,6 @@ graph TD
     youtube_worker_node --> html_synthesizer_node
     genui_worker_node --> html_synthesizer_node
     device_worker_node --> html_synthesizer_node
-    a2ui_worker_node --> html_synthesizer_node
+    html_gen_worker_node --> html_synthesizer_node
     html_synthesizer_node --> END([✅ END])
 """

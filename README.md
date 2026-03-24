@@ -178,40 +178,7 @@ python main.py
 Tizen 기기에서 직접 서버로 데이터를 전송할 때 사용합니다.
 - **Method**: `POST`
 - **Body**: `{"device_id": "TIZEN-001", "content": "Status update..."}`
-
-## A2UI (Agent-to-UI) 응답 예시
-
-에이전트가 UI를 생성할 때 `ui_code` 필드에 포함되는 JSON 예시입니다. (v0.9 Draft 규격 준수)
-
-```json
-[
-  {
-    "version": "v0.9",
-    "createSurface": {
-      "surfaceId": "weather_card",
-      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
-    }
-  },
-  {
-    "version": "v0.9",
-    "updateComponents": {
-      "surfaceId": "weather_card",
-      "components": [
-        { "id": "root", "component": "Card", "child": "container" },
-        {
-          "id": "container",
-          "component": "Column",
-          "children": ["title", "temp_row"]
-        },
-        { "id": "title", "component": "Text", "text": "현재 날씨", "variant": "h2" },
-        { "id": "temp_row", "component": "Row", "children": ["icon", "temp"] },
-        { "id": "icon", "component": "Icon", "name": "wb_sunny" },
-        { "id": "temp", "component": "Text", "text": "24°C" }
-      ]
-    }
-  }
-]
-```
+- **Response**: `{"status": "captured"}`
 
 ## 테스트 방법 (CLI 클라이언트)
 
@@ -228,7 +195,7 @@ python test.py
 ### 테스트 도구 주요 기능
 - **서버 연결 확인**: `/connect` 엔드포인트를 호출하여 SDB 역전송 세팅, 제미나이 준비 상태, 로드된 도구 개수를 초기 검증합니다.
 - **채팅 UI**: 사용자 메시지와 에이전트의 답변을 구분하여 출력합니다.
-- **A2UI 뷰어**: 에이전트가 생성한 UI 코드가 있을 경우, 터미널에 구조화된 JSON을 함께 표시합니다.
+- **HTML 뷰어**: 에이전트가 생성한 HTML UI 코드가 있을 경우, 터미널에 코드의 요약을 표시합니다.
 - **종료**: `exit`, `quit`, `q`, `ㅂㅂ` 를 입력하거나 `Ctrl+C`를 눌러 종료할 수 있습니다.
 
 ### 테스트 실행 예시 (Log)
@@ -310,7 +277,8 @@ Router-Agent 아키텍처의 각 에이전트가 정상적으로 동작하는지
 MIT License
 
 ---
-**마지막 수정 날짜:** 2026-03-24 21:23
+**마지막 수정 날짜:** 2026-03-24 21:28
 
-**수정 사항:** 유튜브 영상 추천 요청 시 `youtube_play` 대신 `briefing` 에이전트로 분류되도록 로직을 정교화하여 카드뷰 형태의 정보를 제공하도록 개선했습니다.
+**수정 사항:** `a2ui_worker_node`를 `html_gen_worker_node`로 리팩토링하고, A2UI JSON 규격 대신 **프리미엄 HTML/CSS**를 직접 생성하여 반환하도록 기능을 전환했습니다.
+
 

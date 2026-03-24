@@ -245,33 +245,36 @@ async def device_worker_node(state: AgentState) -> Dict[str, Any]:
     result: WorkerResult = {"task": "device_control", "text": final_text, "ui_code": ""}
     return {"worker_results": [result]}
 
-async def a2ui_worker_node(state: AgentState) -> Dict[str, Any]:
-    """A2UI Draw Worker Node."""
-    print("[a2ui_worker_node] Generating A2UI layout...")
+async def html_gen_worker_node(state: AgentState) -> Dict[str, Any]:
+    """HTML Generation Agent Node: 요청된 시나리오에 맞는 프리미엄 HTML UI를 생성합니다."""
+    print("[html_gen_worker_node] Generating Premium HTML UI...")
     last_human = next(
         (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
         "",
     )
     system_prompt = (
-        "당신은 A2UI(Agent-to-UI) v0.9 규격의 전문 UI/UX 디자이너입니다.\n\n"
-        "[A2UI v0.9 메시지 구조]\n"
-        "- 출력은 반드시 JSON 메시지 객체들의 리스트(Array)여야 합니다.\n"
-        "- 모든 메시지는 `version: 'v0.9'` 필드를 포함해야 합니다.\n"
-        "- 첫 번째 메시지: `createSurface` (surfaceId: 'main_surface')\n"
-        "- 두 번째 메시지: `updateComponents` (surfaceId: 'main_surface', components: [...])\n\n"
-        "반드시 유효한 JSON 리스트만 출력하고 다른 설명은 생략하세요."
+        "당신은 Tizen 기기용 프리미엄 웹 인터페이스를 설계하는 전문 UI/UX 디자이너입니다.\n"
+        "사용자의 요청에 따라 현대적이고, 세련되며, 즉시 사용 가능한 단일 HTML/CSS 코드를 작성하세요.\n\n"
+        "[디자인 원칙]\n"
+        "- 다크 모드 기반의 고급스러운 색상 팔레트 사용 (#000000, #1A1A1A, #007AFF 등)\n"
+        "- Glassmorphism, 부드러운 그림자(Box-shadow), 세련된 타이포그래피 활용\n"
+        "- Tizen TV/기기 리모컨 사용성을 고려하여 버튼이나 카드 요소가 충분히 크고 명확해야 함\n"
+        "- 텍스트 가독성을 위해 적절한 여백(Padding/Margin) 확보\n"
+        "- CSS 애니메이션(Fade-in, Hover scale 등)을 통해 고급스러운 느낌 전달\n\n"
+        "반드시 <html>로 시작하여 </html>로 끝나는 코드만 반환하세요. 마크다운 백틱은 사용하지 마세요."
     )
-    llm = make_llm("gemini-2.5-flash", temperature=0.2)
-    prompt = f"사용자 요청: {last_human}\n이 요청에 맞는 A2UI 코드를 생성해줘. 프리미엄한 디자인 감각으로!"
+    llm = make_llm("gemini-2.5-flash", temperature=0.3)
+    prompt = f"사용자 요청: {last_human}\n이 요청에 맞는 가장 아름다운 UI 화면을 HTML 전체 코드로 생성해줘."
     response = await llm.ainvoke([("system", system_prompt), ("human", prompt)])
-    ui_code = extract_json(response.content)
-    try:
-        ui_data = json.loads(ui_code)
-        if isinstance(ui_data, dict) and "messages" in ui_data:
-            ui_code = json.dumps(ui_data["messages"], ensure_ascii=False)
-    except Exception:
-        pass
-    result: WorkerResult = {"task": "draw_ui", "text": "요청하신 디자인을 HTML로 생성했습니다.", "ui_code": ui_code}
+    
+    html_code = response.content.strip()
+    # 백틱 제거 (안전 장치)
+    if html_code.startswith("```html"):
+        html_code = html_code[7:-3].strip()
+    elif html_code.startswith("```"):
+        html_code = html_code[3:-3].strip()
+
+    result: WorkerResult = {"task": "draw_ui", "text": "요청하신 UI 디자인을 프리미엄 HTML로 생성했습니다.", "ui_code": html_code}
     return {"worker_results": [result]}
 
 async def search_presenter_worker_node(state: AgentState) -> Dict[str, Any]:
