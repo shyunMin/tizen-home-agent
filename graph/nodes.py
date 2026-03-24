@@ -154,32 +154,7 @@ async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
         elif html_code.startswith("```"):
             html_code = html_code[3:-3].strip()
             
-        # 3. 서버 임시 저장
-        filepath = "tizen_briefing.html"
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(html_code)
-            
-        # 4. SDB 전송 (Push)
-        serial = get_device_serial()
-        cmd_base = ["sdb"]
-        if serial:
-            cmd_base.extend(["-s", serial])
-            
-        push_cmd = cmd_base + ["push", filepath, "/opt/usr/share/home/tizen_briefing.html"]
-        print(f"[briefing_worker_node] Push Executing: {' '.join(push_cmd)}")
-        subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=15)
-        
-        # 권한 부여 (chsmack)
-        chsmack_cmd = cmd_base + ["shell", "chsmack", "-a", "_", "/opt/usr/share/home/tizen_briefing.html"]
-        print(f"[briefing_worker_node] chsmack Executing: {' '.join(chsmack_cmd)}")
-        subprocess.run(chsmack_cmd, capture_output=True, text=True, check=True, timeout=15)
-        
-        # 5. 앱 실행 (Launch)
-        launch_cmd = cmd_base + ["shell", "app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file:///opt/usr/share/home/tizen_briefing.html"]
-        print(f"[briefing_worker_node] Launch Executing: {' '.join(launch_cmd)}")
-        subprocess.run(launch_cmd, capture_output=True, text=True, check=True, timeout=10)
-        
-        text_result = "정보를 검색하여 브리핑 카드 뉴스를 기기 화면에 표시했습니다."
+        text_result = "정보를 검색하여 브리핑 카드 뉴스를 생성했습니다."
     except Exception as e:
         print(f"[briefing_worker_node] Error: {e}")
         text_result = f"브리핑 화면을 생성하거나 기기에 전송하는 중 오류가 발생했습니다: {e}"
@@ -325,26 +300,15 @@ async def search_presenter_worker_node(state: AgentState) -> Dict[str, Any]:
             # fallback if not valid json
             target_url = ""
             
-        if target_url:
-            print(f"[search_presenter_worker_node] Found URL: {target_url}")
-            serial = get_device_serial()
-            cmd = ["sdb"]
-            if serial:
-                cmd.extend(["-s", serial])
-            shell_cmd = f"app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ {target_url}"
-            cmd.extend(["shell", shell_cmd])
-            
-            print(f"[search_presenter_worker_node] Executing: {' '.join(cmd)}")
-            subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=10)
-            text_result = f"검색 결과를 TV 화면에 띄웠습니다. (URL: {target_url})"
+            text_result = f"검색 결과 관련 URL을 추출했습니다. (URL: {target_url})"
         else:
-            text_result = "적절한 검색 결과 URL을 찾지 못해 화면에 띄우지 못했습니다."
+            text_result = "적절한 검색 결과 URL을 찾지 못했습니다."
             
     except Exception as e:
         print(f"[search_presenter_worker_node] Error: {e}")
         text_result = "검색 결과를 화면에 표시하는 중 오류가 발생했습니다."
 
-    result: WorkerResult = {"task": "search_presenter", "text": text_result, "ui_code": ""}
+    result: WorkerResult = {"task": "search_presenter", "text": text_result, "ui_code": target_url if 'target_url' in locals() else ""}
     existing = cast(List[WorkerResult], state.get("worker_results", []))
     return {"worker_results": existing + [result]}
 
@@ -382,38 +346,8 @@ async def app_deploy_worker_node(state: AgentState) -> Dict[str, Any]:
         elif html_code.startswith("```"):
             html_code = html_code[3:-3].strip()
 
-        # 1. 로컬 저장 (프로젝트 폴더 내)
-        filename = "tizen_generated_app.html"
-        filepath = filename
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(html_code)
-
-        # 2. SDB 전송 (Push)
-        serial = get_device_serial()
-        cmd_base = ["sdb"]
-        if serial:
-            cmd_base.extend(["-s", serial])
-            
-        remote_path = f"/opt/usr/share/home/{filename}"
-        push_cmd = cmd_base + ["push", filepath, remote_path]
-        print(f"[app_deploy_worker_node] Push Executing: {' '.join(push_cmd)}")
-        subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=30)
-        
-        # 3. Smack 권한 부여 (chsmack)
-        chsmack_cmd = cmd_base + ["shell", "chsmack", "-a", "_", remote_path]
-        print(f"[app_deploy_worker_node] chsmack Executing: {' '.join(chsmack_cmd)}")
-        subprocess.run(chsmack_cmd, capture_output=True, text=True, check=True, timeout=15)
-        
-        # 4. 앱 실행 (Launch WebView)
-        launch_cmd = cmd_base + ["shell", f"app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file://{remote_path}"]
-        print(f"[app_deploy_worker_node] Launch Executing: {' '.join(launch_cmd)}")
-        subprocess.run(launch_cmd, capture_output=True, text=True, check=True, timeout=15)
-        
         text_result = (
-            f"요청하신 '{last_human}' 앱을 생성하여 Tizen 기기에 성공적으로 배포 및 실행했습니다.\n\n"
-            f"실행 경로: {remote_path}\n\n"
-            f"### [생성된 HTML 코드]\n"
-            f"```html\n{html_code}\n```"
+            f"요청하신 '{last_human}' 앱 코드를 생성했습니다.\n"
         )
         
     except Exception as e:
@@ -509,33 +443,7 @@ async def youtube_worker_node(state: AgentState) -> Dict[str, Any]:
 </body>
 </html>"""
 
-        filepath = "tizen_youtube.html"
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(html_code)
-
-        serial = get_device_serial()
-        cmd_base = ["sdb"]
-        if serial:
-            cmd_base.extend(["-s", serial])
-            
-        remote_path = "/opt/usr/share/home/tizen_youtube.html"
-        
-        # 1. 기기로 HTML 파일 전송
-        push_cmd = cmd_base + ["push", filepath, remote_path]
-        print(f"[youtube_worker_node] Push Executing: {' '.join(push_cmd)}")
-        subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=15)
-        
-        # 2. Smack 권한 부여
-        shsmack_cmd = cmd_base + ["shell", "chsmack", "-a", "_", remote_path]
-        print(f"[youtube_worker_node] shsmack Executing: {' '.join(shsmack_cmd)}")
-        subprocess.run(shsmack_cmd, capture_output=True, text=True, check=True, timeout=15)
-        
-        # 3. WebView로 로컬 파일 실행
-        launch_cmd = cmd_base + ["shell", f"app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file://{remote_path}"]
-        print(f"[youtube_worker_node] Launch Executing: {' '.join(launch_cmd)}")
-        subprocess.run(launch_cmd, capture_output=True, text=True, check=True, timeout=15)
-
-        text_result = f"유튜브에서 '{video_title}' 영상을 찾았습니다. 기기에서 재생을 시작합니다."
+        text_result = f"유튜브에서 '{video_title}' 영상을 찾았습니다."
         
     except Exception as e:
         print(f"[youtube_worker_node] Error: {e}")
@@ -616,26 +524,7 @@ async def genui_worker_node(state: AgentState) -> Dict[str, Any]:
             print(f"[genui_worker_node] MCP Error: {mcp_e}, falling back to fragment.")
             final_html = f"<html><head><script src='https://cdn.tailwindcss.com'></script></head><body>{html_fragment}</body></html>"
             
-        # 1. 파일 저장
-        filename = "tizen_genui.html"
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(final_html)
-
-        # 2. 기기로 전송 & 실행
-        serial = get_device_serial()
-        cmd_base = ["sdb"]
-        if serial: cmd_base.extend(["-s", serial])
-        remote_path = f"/opt/usr/share/home/{filename}"
-        
-        # 파일 전송
-        subprocess.run(cmd_base + ["push", filename, remote_path], capture_output=True, check=True, timeout=15)
-        # 권한 부여
-        subprocess.run(cmd_base + ["shell", "chsmack", "-a", "_", remote_path], capture_output=True, check=True, timeout=15)
-        # 웹뷰로 실행
-        launch_cmd = cmd_base + ["shell", f"app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file://{remote_path}"]
-        subprocess.run(launch_cmd, capture_output=True, check=True, timeout=15)
-
-        text_result = f"요청하신 화면을 OpenGenerativeUI 기반으로 시각화하여 기기에 띄웠습니다."
+        text_result = f"요청하신 화면을 OpenGenerativeUI 기반으로 시각화했습니다."
     except Exception as e:
         print(f"[genui_worker_node] Error: {e}")
         text_result = f"화면 시각화 중 오류가 발생했습니다: {e}"
