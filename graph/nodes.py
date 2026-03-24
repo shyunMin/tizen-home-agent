@@ -423,9 +423,9 @@ async def app_deploy_worker_node(state: AgentState) -> Dict[str, Any]:
     result: WorkerResult = {"task": "app_deploy", "text": text_result, "ui_code": ""}
     return {"worker_results": [result]}
 
-async def reconstructor_node(state: AgentState) -> Dict[str, Any]:
-    """Reconstructor Node."""
-    print("[reconstructor_node] Merging worker results...")
+async def synthesizer_node(state: AgentState) -> Dict[str, Any]:
+    """Synthesizer Node (구 Reconstructor)"""
+    print("[synthesizer_node] Merging worker results...")
     worker_results: List[WorkerResult] = cast(List[WorkerResult], state.get("worker_results", []))
     last_human = next(
         (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
@@ -441,7 +441,7 @@ async def reconstructor_node(state: AgentState) -> Dict[str, Any]:
     else:
         worker_summary = "\n\n".join(f"[{r['task']} 결과]\n{r['text']}" for r in worker_results)
         system_prompt = (
-            "너는 다수의 AI 워커 결과를 통합하는 Reconstructor야. "
+            "너는 다수의 AI 워커 결과를 통합하는 Synthesizer(결과 통합기)야. "
             "아래 각 워커의 결과를 자연스럽게 하나의 답변으로 합쳐줘. "
             "사용자 원래 요청: {last_human}"
         )
@@ -457,7 +457,7 @@ async def reconstructor_node(state: AgentState) -> Dict[str, Any]:
                 except: pass
         ui_code = json.dumps(all_ui, ensure_ascii=False) if all_ui else ""
 
-    print(f"[reconstructor_node] Final text length: {len(final_text)}")
+    print(f"[synthesizer_node] Final text length: {len(final_text)}")
     return {"final_text": final_text, "ui_code": ui_code, "messages": [AIMessage(content=final_text)]}
 
 async def youtube_worker_node(state: AgentState) -> Dict[str, Any]:

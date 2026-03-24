@@ -12,7 +12,7 @@ from graph.nodes import (
     app_deploy_worker_node,
     youtube_worker_node,
     genui_worker_node,
-    reconstructor_node,
+    synthesizer_node,
 )
 
 def route_to_workers(state: AgentState):
@@ -63,7 +63,7 @@ def build_graph() -> StateGraph:
     graph.add_node("genui_worker_node", genui_worker_node)
     graph.add_node("device_worker_node", device_worker_node)
     graph.add_node("a2ui_worker_node", a2ui_worker_node)
-    graph.add_node("reconstructor_node", reconstructor_node)
+    graph.add_node("synthesizer_node", synthesizer_node)
 
     graph.add_edge(START, "router_node")
 
@@ -94,9 +94,9 @@ def build_graph() -> StateGraph:
         "device_worker_node",
         "a2ui_worker_node",
     ]:
-        graph.add_edge(worker, "reconstructor_node")
+        graph.add_edge(worker, "synthesizer_node")
 
-    graph.add_edge("reconstructor_node", END)
+    graph.add_edge("synthesizer_node", END)
     return graph.compile()
 
 def get_mermaid_diagram(compiled_graph) -> str:
@@ -118,14 +118,14 @@ graph TD
     router_node --> genui_worker_node["✨ GenUI Worker"]
     router_node --> device_worker_node["📱 Device Worker"]
     router_node --> a2ui_worker_node["🎨 A2UI Worker"]
-    chat_worker_node --> reconstructor_node["🔧 Reconstructor"]
-    search_worker_node --> reconstructor_node
-    search_presenter_worker_node --> reconstructor_node
-    briefing_worker_node --> reconstructor_node
-    app_deploy_worker_node --> reconstructor_node
-    youtube_worker_node --> reconstructor_node
-    genui_worker_node --> reconstructor_node
-    device_worker_node --> reconstructor_node
-    a2ui_worker_node --> reconstructor_node
-    reconstructor_node --> END([✅ END])
+    chat_worker_node --> synthesizer_node["🔄 Synthesizer"]
+    search_worker_node --> synthesizer_node
+    search_presenter_worker_node --> synthesizer_node
+    briefing_worker_node --> synthesizer_node
+    app_deploy_worker_node --> synthesizer_node
+    youtube_worker_node --> synthesizer_node
+    genui_worker_node --> synthesizer_node
+    device_worker_node --> synthesizer_node
+    a2ui_worker_node --> synthesizer_node
+    synthesizer_node --> END([✅ END])
 """

@@ -40,16 +40,16 @@ graph TD
     Orchestrator -->|기기 설정| DeviceAgent
     Orchestrator -->|UI 프레임| DesignAgent
     
-    ChatAgent --> Reconstructor
-    SearchAgent --> Reconstructor
-    BriefingAgent --> Reconstructor
-    AppGenAgent --> Reconstructor
-    YouTubeAgent --> Reconstructor
-    GenUIAgent --> Reconstructor
-    DeviceAgent --> Reconstructor
-    DesignAgent --> Reconstructor
+    ChatAgent --> Synthesizer
+    SearchAgent --> Synthesizer
+    BriefingAgent --> Synthesizer
+    AppGenAgent --> Synthesizer
+    YouTubeAgent --> Synthesizer
+    GenUIAgent --> Synthesizer
+    DeviceAgent --> Synthesizer
+    DesignAgent --> Synthesizer
     
-    Reconstructor["🔧 융합 모듈 (Reconstructor)\n(결과 통합 및 정리)"] --> END([✅ 최종 응답 반환])
+    Synthesizer["🔄 결과 통합기 (Synthesizer)\n(결과 수합 및 최종 답변 완성)"] --> END([✅ 최종 응답 반환])
 ```
 
 
@@ -110,7 +110,7 @@ sequenceDiagram
     participant Router as 🧭 Router Node
     participant Device as 📱 Device Worker
     participant SDB as 🛠️ SDB Handler (Tizen)
-    participant Recon as 🔧 Reconstructor
+    participant Recon as 🔄 Synthesizer (결과 통합)
 
     App->>Server: "볼륨 10으로 높여줘" (POST /chat)
     Server->>Router: 사용자 의도 분석 (Gemini)
@@ -122,7 +122,7 @@ sequenceDiagram
     SDB-->>Device: 제어 결과 리턴 (Success/Fail)
     
     Device-->>Server: WorkerResult 생성 (상태 요약)
-    Server->>Recon: 워커 결과 통합 및 최종 답변 구성
+    Server->>Recon: 워커 다중 결과 수합 및 통합 답변 텍스트(A2UI 포함) 합성
     Recon-->>Server: Final Response (Text/Status)
     
     Server-->>App: 최종 결과 반환 (JSON)
@@ -322,4 +322,4 @@ Router-Worker 아키텍처의 각 워커가 정상적으로 동작하는지 확�
 MIT License
 
 ---
-**마지막 수정 날짜:** 2026-03-24 15:21
+**마지막 수정 날짜:** 2026-03-24 15:24
