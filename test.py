@@ -7,7 +7,7 @@ BASE_URL = "http://localhost:10010"
 def check_connection():
     print(f"\n[1/2] 서버 연결 확인 중... ({BASE_URL}/connect)")
     try:
-        response = requests.post(f"{BASE_URL}/connect", timeout=10)
+        response = requests.post(f"{BASE_URL}/connect", timeout=125)
         if response.status_code == 200:
             data = response.json()
             print(f"✅ 서버 연결 성공!")
@@ -57,7 +57,7 @@ def send_chat(message):
         response = requests.post(
             f"{BASE_URL}/chat",
             json={"message": message},
-            timeout=30
+            timeout=125
         )
         if response.status_code == 200:
             data = response.json()

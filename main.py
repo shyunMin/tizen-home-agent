@@ -13,7 +13,7 @@ from typing import List, Dict, Any, cast
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -41,8 +41,35 @@ compiled_graph = None
 # FastAPI 앱 정의 및 Lifecycle 관리
 # ---------------------------------------------------------------------------
 
+import subprocess
+import os
+
+# 전역 데몬 프로세스
+mcp_process = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 0. OpenGenerativeUI MCP Server 실행
+    global mcp_process
+    og_dir = os.path.join(os.getcwd(), "OpenGenerativeUI")
+    mcp_dir = os.path.join(og_dir, "apps", "mcp")
+    
+    if not os.path.exists(og_dir):
+        print("[Lifespan] Cloning OpenGenerativeUI...")
+        subprocess.run(["git", "submodule", "add", "https://github.com/CopilotKit/OpenGenerativeUI.git", "OpenGenerativeUI"], check=False)
+        print("[Lifespan] Installing dependencies and building OpenGenerativeUI...")
+        subprocess.run(["pnpm", "install"], cwd=og_dir, check=False)
+        subprocess.run(["pnpm", "build"], cwd=mcp_dir, check=False)
+
+    if os.path.exists(mcp_dir):
+        print("[Lifespan] Starting OpenGenerativeUI MCP Server...")
+        mcp_process = subprocess.Popen(
+            ["pnpm", "dev"], 
+            cwd=mcp_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
     # 1. SDB 환경 설정 (역방향 포트 포워딩)
     setup_sdb_reverse()
 
@@ -57,6 +84,10 @@ async def lifespan(app: FastAPI):
     print("LangGraph graph compiled successfully.")
 
     yield
+
+    if mcp_process:
+        print("[Lifespan] Shutting down OpenGenerativeUI MCP Server...")
+        mcp_process.terminate()
 
 app = FastAPI(
     title="Tizen Home Agent",
@@ -91,6 +122,15 @@ class ChatResponse(BaseModel):
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "Tizen Home Agent is running"}
+
+@app.get("/youtube", response_class=HTMLResponse)
+async def serve_youtube():
+    """Tizen 기기에서 HTTP Origin을 가지도록 유튜브 HTML을 직접 서빙합니다."""
+    try:
+        with open("tizen_youtube.html", "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return "<h1>YouTube player not found</h1>"
 
 @app.get("/graph/mermaid", response_class=JSONResponse)
 async def get_mermaid():

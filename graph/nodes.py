@@ -72,7 +72,9 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
         "3. device_control: Tizen 기기 제어 명령만 수행 (성공/실패 여부만 확인, 예: '볼륨 높여줘', 'WiFi 설정 열어')\n"
         "4. draw_a2ui: UI 레이아웃·화면 생성 요청 (예: '대시보드 그려줘', '날씨 카드 만들어')\n"
         "5. briefing: 최신 정보를 검색하여 깔끔한 카드 뉴스 형태의 HTML로 브리핑하고 기기에 전송/실행을 요청하는 경우 (예: '오늘 주요 뉴스 브리핑해줘', '맛집 정보 카드 뉴스로 보여줘')\n"
-        "6. app_deploy: 사용자의 앱 개발 요청을 받아 외부 API를 통해 코드를 생성하고, 결과물을 Tizen 장치에 자동으로 배포/압축 해제하는 경우 (예: '앱 만들어줘', '이러이러한 앱을 생성하고 배포해줘')\n"
+        "6. app_deploy: 사용자의 요청에 따라 Tizen용 단일 파일 HTML 앱을 직접 생성하고, 결과물을 Tizen 장치에 실시간 배포/실행하는 경우 (예: '계산기 앱 만들어줘', '게임 만들어줘')\n"
+        "7. youtube_play: 사용자가 유튜브에서 특정 영상을 시청/재생하고자 요청하는 경우 (예: '아이유 노래 유튜브에서 틀어줘', '침착맨 영상 재생해줘')\n"
+        "8. genui: 복잡한 3D 시각화, 차트, 아름다운 꼬여있는 UI 컴포넌트 등 OpenGenerativeUI 기반의 고품질 화면을 생성해달라고 요청하는 경우\n"
         "여러 Task가 필요하면 모두 포함하고 intent를 'complex'로 설정해."
     )
 
@@ -166,6 +168,11 @@ async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
         push_cmd = cmd_base + ["push", filepath, "/opt/usr/share/home/tizen_briefing.html"]
         print(f"[briefing_worker_node] Push Executing: {' '.join(push_cmd)}")
         subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=15)
+        
+        # 권한 부여 (chsmack)
+        chsmack_cmd = cmd_base + ["shell", "chsmack", "-a", "_", "/opt/usr/share/home/tizen_briefing.html"]
+        print(f"[briefing_worker_node] chsmack Executing: {' '.join(chsmack_cmd)}")
+        subprocess.run(chsmack_cmd, capture_output=True, text=True, check=True, timeout=15)
         
         # 5. 앱 실행 (Launch)
         launch_cmd = cmd_base + ["shell", "app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file:///opt/usr/share/home/tizen_briefing.html"]
@@ -342,81 +349,76 @@ async def search_presenter_worker_node(state: AgentState) -> Dict[str, Any]:
     return {"worker_results": existing + [result]}
 
 async def app_deploy_worker_node(state: AgentState) -> Dict[str, Any]:
-    """App Generation & Remote Deployment Worker Node."""
-    print("[app_deploy_worker_node] Running app generation and deployment...")
+    """App Generation & Remote Deployment Worker Node (In-agent Generation)."""
+    print("[app_deploy_worker_node] Generating app and deploying...")
     last_human = next(
         (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
         "",
     )
 
-    cmd_base = ["sdb"]
-    serial = get_device_serial()
-    if serial:
-        cmd_base.extend(["-s", serial])
+    llm = make_llm("gemini-2.5-flash")
 
-    # 1. API 호출 (Code Generation)
-    api_url = "http://sabi.sraisys.com/v1/code/complete"
-    payload = {"prompt": last_human, "message": last_human}
-    text_result = ""
+    system_prompt = (
+        "당신은 Tizen OS용 웹 애플리케이션 개발 전문가입니다.\n"
+        "사용자의 요청에 따라 단일 HTML 파일로 작동하는 완성도 높은 웹 앱 코드를 작성하세요.\n\n"
+        "[개발 가이드라인]\n"
+        "- 모든 HTML, CSS, JavaScript를 하나의 파일에 포함하세요.\n"
+        "- 디자인은 현대적이고 세련되어야 합니다 (Glassmorphism, 다크 모드, 부드러운 애니메이션 등).\n"
+        "- Tizen TV/기기 리모컨 사용성을 고려하여 버튼 등의 요소가 충분히 크고 포커스 효과가 있어야 합니다.\n"
+        "- 라이브러리는 CDN을 통해 로드할 수 있습니다 (Font Awesome, Google Fonts, Tailwind CSS 등).\n"
+        "- 응답은 반드시 <html>로 시작해서 </html>로 끝나는 유효한 HTML 코드만 반환하세요.\n"
+        "- 마크다운 백틱(```html)을 사용하지 마세요."
+    )
 
-    print("[app_deploy_worker_node] API 서버에서 코드를 생성 중입니다...")
+    prompt = f"사용자 요청: {last_human}\n위 요청에 부합하는 최고의 Tizen 웹 앱 코드를 HTML로 작성해줘."
+    
     try:
-        response = requests.post(api_url, json=payload, timeout=60)
-        response.raise_for_status()
-        res_json = response.json()
-
-        # JSON 응답에서 파일 다운로드 주소 추출
-        download_url = None
-        for key in ["url", "download_url", "file_url", "link"]:
-            if key in res_json:
-                download_url = res_json[key]
-                break
+        response = await llm.ainvoke([("system", system_prompt), ("human", prompt)])
+        html_code = response.content.strip()
         
-        if not download_url:
-            import re
-            urls = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', json.dumps(res_json))
-            if urls:
-                download_url = urls[0]
+        # 백틱 제거 (안전 장치)
+        if html_code.startswith("```html"):
+            html_code = html_code[7:-3].strip()
+        elif html_code.startswith("```"):
+            html_code = html_code[3:-3].strip()
 
-        if not download_url:
-            raise ValueError("API 응답에서 파일 다운로드 주소를 찾을 수 없습니다.")
+        # 1. 로컬 저장 (프로젝트 폴더 내)
+        filename = "tizen_generated_app.html"
+        filepath = filename
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(html_code)
 
-        # 2. 파일 다운로드 및 서버 임시 저장
-        # URL에서 파일명 추출
-        filename = download_url.split("/")[-1]
-        if not filename or "?" in filename:
-            filename = "generated_app.zip"
-
-        tmp_dir = "/tmp/tizen_apps"
-        os.makedirs(tmp_dir, exist_ok=True)
-        local_filepath = os.path.join(tmp_dir, filename)
-
-        print(f"[app_deploy_worker_node] 파일 다운로드를 시작합니다: {download_url}")
-        file_res = requests.get(download_url, timeout=30)
-        file_res.raise_for_status()
-        with open(local_filepath, "wb") as f:
-            f.write(file_res.content)
-
-        # 3. SDB 전송 (Push)
-        remote_filepath = f"/opt/usr/share/home/{filename}"
-        push_cmd = cmd_base + ["push", local_filepath, remote_filepath]
-        print(f"[app_deploy_worker_node] 파일 전송을 시작합니다: {' '.join(push_cmd)}")
-        push_proc = subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=30)
-
-        # 4. 원격 압축 해제 (Unzip)
-        print("[app_deploy_worker_node] 기기에 전송된 파일의 압축을 해제합니다...")
-        unzip_cmd = cmd_base + ["shell", "unzip", "-o", remote_filepath, "-d", "/opt/usr/share/home/"]
-        print(f"[app_deploy_worker_node] 원격 압축 해제를 시작합니다: {' '.join(unzip_cmd)}")
-        unzip_proc = subprocess.run(unzip_cmd, capture_output=True, text=True, check=True, timeout=30)
-
+        # 2. SDB 전송 (Push)
+        serial = get_device_serial()
+        cmd_base = ["sdb"]
+        if serial:
+            cmd_base.extend(["-s", serial])
+            
+        remote_path = f"/opt/usr/share/home/{filename}"
+        push_cmd = cmd_base + ["push", filepath, remote_path]
+        print(f"[app_deploy_worker_node] Push Executing: {' '.join(push_cmd)}")
+        subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=30)
+        
+        # 3. Smack 권한 부여 (chsmack)
+        chsmack_cmd = cmd_base + ["shell", "chsmack", "-a", "_", remote_path]
+        print(f"[app_deploy_worker_node] chsmack Executing: {' '.join(chsmack_cmd)}")
+        subprocess.run(chsmack_cmd, capture_output=True, text=True, check=True, timeout=15)
+        
+        # 4. 앱 실행 (Launch WebView)
+        launch_cmd = cmd_base + ["shell", f"app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file://{remote_path}"]
+        print(f"[app_deploy_worker_node] Launch Executing: {' '.join(launch_cmd)}")
+        subprocess.run(launch_cmd, capture_output=True, text=True, check=True, timeout=15)
+        
         text_result = (
-            "API 서버에서 코드를 생성하여 파일 다운로드 및 전송을 완료했습니다.\n"
-            "앱 배포 및 압축 해제가 완료되었습니다.\n"
-            "설치 경로: /opt/usr/share/home/"
+            f"요청하신 '{last_human}' 앱을 생성하여 Tizen 기기에 성공적으로 배포 및 실행했습니다.\n\n"
+            f"실행 경로: {remote_path}\n\n"
+            f"### [생성된 HTML 코드]\n"
+            f"```html\n{html_code}\n```"
         )
+        
     except Exception as e:
         print(f"[app_deploy_worker_node] Error: {e}")
-        text_result = f"앱 배포 중 에러가 발생했습니다: {e}"
+        text_result = f"앱 생성 및 배포 중 오류가 발생했습니다: {e}"
 
     result: WorkerResult = {"task": "app_deploy", "text": text_result, "ui_code": ""}
     return {"worker_results": [result]}
@@ -457,3 +459,188 @@ async def reconstructor_node(state: AgentState) -> Dict[str, Any]:
 
     print(f"[reconstructor_node] Final text length: {len(final_text)}")
     return {"final_text": final_text, "ui_code": ui_code, "messages": [AIMessage(content=final_text)]}
+
+async def youtube_worker_node(state: AgentState) -> Dict[str, Any]:
+    """YouTube Worker Node: 유튜브 영상을 검색하고 HTML로 만들어 Tizen 기기에 재생을 요청합니다."""
+    print("[youtube_worker_node] Running YouTube Search and Play...")
+    last_human = next(
+        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
+        "",
+    )
+
+    llm = make_llm("gemini-2.5-flash")
+    system_prompt = (
+        "당신은 유튜브 검색어 추출기입니다. 사용자의 입력에서 유튜브에 검색할 '가장 적절한 검색어' 딱 하나만 추출해서 문자열로 반환하세요.\n"
+        "예: '아이유 좋은날 유튜브에서 재생해줘' -> '아이유 좋은날'\n"
+        "응답에는 부가 설명 없이 오직 검색어만 출력하세요."
+    )
+    
+    try:
+        response = await llm.ainvoke([("system", system_prompt), ("human", last_human)])
+        search_query = response.content.strip()
+        print(f"[youtube_worker_node] Extracted search query: {search_query}")
+        
+        from youtube_search import YoutubeSearch
+        results = YoutubeSearch(search_query, max_results=1).to_dict()
+        
+        if not results:
+            return {"worker_results": [{"task": "youtube_play", "text": "유튜브에서 관련된 영상을 찾지 못했습니다.", "ui_code": ""}]}
+        
+        video_id = results[0]["id"]
+        video_title = results[0]["title"]
+        
+        html_code = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{video_title}</title>
+<style>
+  body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; color: white; font-family: sans-serif; }}
+  h1 {{ font-size: 2rem; }}
+</style>
+<script>
+  // 퍼가기 금지 영상(오류 153)을 우회하기 위해 유튜브 실제 페이지로 직접 이동합니다.
+  setTimeout(function() {{
+      window.location.replace("https://www.youtube.com/watch?v={video_id}");
+  }}, 800);
+</script>
+</head>
+<body>
+  <h1>유튜브로 이동하는 중입니다...</h1>
+</body>
+</html>"""
+
+        filepath = "tizen_youtube.html"
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(html_code)
+
+        serial = get_device_serial()
+        cmd_base = ["sdb"]
+        if serial:
+            cmd_base.extend(["-s", serial])
+            
+        remote_path = "/opt/usr/share/home/tizen_youtube.html"
+        
+        # 1. 기기로 HTML 파일 전송
+        push_cmd = cmd_base + ["push", filepath, remote_path]
+        print(f"[youtube_worker_node] Push Executing: {' '.join(push_cmd)}")
+        subprocess.run(push_cmd, capture_output=True, text=True, check=True, timeout=15)
+        
+        # 2. Smack 권한 부여
+        shsmack_cmd = cmd_base + ["shell", "chsmack", "-a", "_", remote_path]
+        print(f"[youtube_worker_node] shsmack Executing: {' '.join(shsmack_cmd)}")
+        subprocess.run(shsmack_cmd, capture_output=True, text=True, check=True, timeout=15)
+        
+        # 3. WebView로 로컬 파일 실행
+        launch_cmd = cmd_base + ["shell", f"app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file://{remote_path}"]
+        print(f"[youtube_worker_node] Launch Executing: {' '.join(launch_cmd)}")
+        subprocess.run(launch_cmd, capture_output=True, text=True, check=True, timeout=15)
+
+        text_result = f"유튜브에서 '{video_title}' 영상을 찾았습니다. 기기에서 재생을 시작합니다."
+        
+    except Exception as e:
+        print(f"[youtube_worker_node] Error: {e}")
+        text_result = f"유튜브 영상 검색 및 재생 중 오류가 발생했습니다: {e}"
+
+    result: WorkerResult = {"task": "youtube_play", "text": text_result, "ui_code": ""}
+    return {"worker_results": [result]}
+
+async def genui_worker_node(state: AgentState) -> Dict[str, Any]:
+    """Generative UI Worker Node: MCP 서버를 통해 고품질 HTML Document 로 조립하여 Tizen에 띄웁니다."""
+    print("[genui_worker_node] Generating high quality UI via MCP...")
+    last_human = next((m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), "")
+
+    try:
+        # LLM으로 HTML Fragment 생성 지시
+        llm = make_llm("gemini-2.5-flash")
+        
+        # OpenGenerativeUI의 마스터 프롬프트를 읽어서 주입 (애니메이션, JS 로직 구현을 위함)
+        playbook_path = os.path.join("OpenGenerativeUI", "apps", "mcp", "skills", "master-agent-playbook.txt")
+        if os.path.exists(playbook_path):
+            with open(playbook_path, "r", encoding="utf-8") as f:
+                playbook_text = f.read()
+        else:
+            playbook_text = ""
+
+        sys_prompt = f"""당신은 Tailwind CSS 기반의 세련된 UI 시각화 컴포넌트 생성기입니다. 
+아래의 Playbook 지침을 엄격하게 따라 애니메이션과 Javascript(인터랙션)가 포함된 완벽한 단일 HTML fragment(body 내부 구조)를 작성하세요.
+절대로 ```html 같은 마크다운 기호 없이 순수 HTML 태그 구조 텍스트만 출력하세요.
+
+---
+{playbook_text}
+"""
+        
+        response = await llm.ainvoke([("system", sys_prompt), ("human", last_human)])
+        html_fragment = response.content.strip()
+        if html_fragment.startswith("```html"):
+            html_fragment = html_fragment[7:-3].strip()
+        elif html_fragment.startswith("```"):
+            html_fragment = html_fragment[3:-3].strip()
+
+        # MCP 서버를 통해 완전한 HTML Document 로 조립 ('assemble_document' tool)
+        final_html = html_fragment # fallback
+        try:
+            from mcp.client.stdio import stdio_client, StdioServerParameters
+            from mcp import ClientSession
+
+            mcp_dir = os.path.abspath(os.path.join("OpenGenerativeUI", "apps", "mcp"))
+            server_params = StdioServerParameters(
+                command="npx",
+                args=["tsx", "src/stdio.ts"],
+                cwd=mcp_dir
+            )
+
+            async with stdio_client(server_params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    result = await session.call_tool("assemble_document", arguments={
+                        "title": "Generative UI",
+                        "description": last_human,
+                        "html": html_fragment
+                    })
+                    final_html = result.content[0].text
+                    
+            # Tizen 단독 실행을 위해 Tailwind CSS CDN 주입 및 CSP 속성 완화
+            if "</head>" in final_html:
+                # CSP에서 tailwindcdn 허용을 위해 unsafe-eval 뒤에 추가
+                final_html = final_html.replace(
+                    "https://cdnjs.cloudflare.com", 
+                    "https://cdnjs.cloudflare.com\n      https://cdn.tailwindcss.com"
+                )
+                # Tailwind 스크립트 추가
+                final_html = final_html.replace(
+                    "</head>", 
+                    "  <script src=\"https://cdn.tailwindcss.com\"></script>\n</head>"
+                )
+        except Exception as mcp_e:
+            import traceback
+            print(f"[genui_worker_node] MCP Error: {mcp_e}, falling back to fragment.")
+            final_html = f"<html><head><script src='https://cdn.tailwindcss.com'></script></head><body>{html_fragment}</body></html>"
+            
+        # 1. 파일 저장
+        filename = "tizen_genui.html"
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(final_html)
+
+        # 2. 기기로 전송 & 실행
+        serial = get_device_serial()
+        cmd_base = ["sdb"]
+        if serial: cmd_base.extend(["-s", serial])
+        remote_path = f"/opt/usr/share/home/{filename}"
+        
+        # 파일 전송
+        subprocess.run(cmd_base + ["push", filename, remote_path], capture_output=True, check=True, timeout=15)
+        # 권한 부여
+        subprocess.run(cmd_base + ["shell", "chsmack", "-a", "_", remote_path], capture_output=True, check=True, timeout=15)
+        # 웹뷰로 실행
+        launch_cmd = cmd_base + ["shell", f"app_launcher -s org.tizen.tizenclaw-webview __APP_SVC_URI__ file://{remote_path}"]
+        subprocess.run(launch_cmd, capture_output=True, check=True, timeout=15)
+
+        text_result = f"요청하신 화면을 OpenGenerativeUI 기반으로 시각화하여 기기에 띄웠습니다."
+    except Exception as e:
+        print(f"[genui_worker_node] Error: {e}")
+        text_result = f"화면 시각화 중 오류가 발생했습니다: {e}"
+
+    result: WorkerResult = {"task": "genui", "text": text_result, "ui_code": ""}
+    return {"worker_results": [result]}
+

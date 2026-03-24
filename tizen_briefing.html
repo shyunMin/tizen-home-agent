@@ -1,0 +1,194 @@
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인기 노트북 비교 브리핑</title>
+    <style>
+        body {
+            background-color: #121212; /* 다크 모드 배경 */
+            color: #E0E0E0; /* 밝은 회색 텍스트 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px; /* 카드 간 간격 */
+            justify-content: center;
+            max-width: 1200px; /* 컨테이너 최대 너비 */
+            padding: 10px;
+        }
+
+        .card {
+            background-color: #1E1E1E; /* 카드 배경 */
+            border-radius: 12px;
+            overflow: hidden;
+            width: 300px; /* 카드 너비 */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4); /* 그림자 효과 */
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* 애니메이션 */
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #333; /* 경계선 추가 */
+        }
+
+        .card:hover, .card:focus-within {
+            transform: scale(1.05); /* 마우스 오버/포커스 시 확대 */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
+            outline: none; /* 포커스 아웃라인 제거 */
+        }
+
+        .card-image-wrapper {
+            width: 100%;
+            height: 180px; /* 이미지 영역 높이 */
+            background-color: #333; /* 이미지 없을 시 대체 배경 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 이미지를 비율 유지하며 채움 */
+            display: block;
+        }
+
+        .card-content {
+            padding: 18px;
+            flex-grow: 1; /* 내용이 카드 높이를 채우도록 */
+            display: flex;
+            flex-direction: column;
+        }
+
+        h3 {
+            font-size: 1.35em;
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: #FFFFFF; /* 흰색 제목 */
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        .description {
+            font-size: 0.9em;
+            line-height: 1.6;
+            color: #B0B0B0; /* 회색 설명 텍스트 */
+            margin-bottom: 15px;
+            /* 텍스트 줄임 처리 */
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .source {
+            font-size: 0.8em;
+            color: #888; /* 어두운 회색 출처 텍스트 */
+            margin-top: auto; /* 하단으로 밀어냄 */
+            margin-bottom: 18px;
+        }
+
+        .button {
+            display: block;
+            width: calc(100% - 0px); /* 패딩 제외 너비 */
+            padding: 12px 0;
+            background-color: #007AFF; /* 버튼 배경색 (Tizen Blue) */
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.95em;
+            transition: background-color 0.2s ease;
+            margin-top: auto; /* 하단으로 밀어냄 */
+            box-sizing: border-box;
+        }
+
+        .button:hover, .button:focus {
+            background-color: #0056B3; /* 버튼 호버 색상 */
+            outline: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            .card {
+                width: calc(100% - 40px); /* 모바일에서는 너비 꽉 채우기 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 카드 1: MacBook Air M3 -->
+        <div class="card" tabindex="0">
+            <div class="card-image-wrapper">
+                <img src="https://store.storeimages.cdn-apple.com/8756/as-images.apple.com/is/macbook-air-m3-202402?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1708641170216" alt="맥북 에어 M3" class="card-image">
+            </div>
+            <div class="card-content">
+                <h3>맥북 에어 M3 (2024)</h3>
+                <p class="description">
+                    뛰어난 성능과 긴 배터리 수명, macOS 생태계의 완벽한 조화를 자랑하는 애플의 최신 울트라포터블 노트북입니다. M3 칩으로 더 강력해진 성능을 경험하세요.
+                </p>
+                <p class="source">출처: Apple 공식 웹사이트</p>
+                <a href="https://www.apple.com/kr/macbook-air-13-and-15-m3/" class="button" target="_blank">자세히 보기</a>
+            </div>
+        </div>
+
+        <!-- 카드 2: LG Gram Pro (2024) -->
+        <div class="card" tabindex="0">
+            <div class="card-image-wrapper">
+                <img src="https://www.lge.co.kr/kr/images/notebook/md09015951/gallery/gram-pro-16-17-gallery01-202401.jpg" alt="LG Gram Pro" class="card-image">
+            </div>
+            <div class="card-content">
+                <h3>LG Gram Pro (2024)</h3>
+                <p class="description">
+                    압도적인 가벼움과 휴대성, 대화면에서도 유지되는 강력한 성능을 겸비한 LG의 플래그십 노트북입니다. AI 성능이 강화되어 더욱 스마트한 사용 경험을 제공합니다.
+                </p>
+                <p class="source">출처: LG전자 공식 웹사이트</p>
+                <a href="https://www.lge.co.kr/notebook/16z90sp-ga56k" class="button" target="_blank">자세히 보기</a>
+            </div>
+        </div>
+
+        <!-- 카드 3: Samsung Galaxy Book4 Pro (2024) -->
+        <div class="card" tabindex="0">
+            <div class="card-image-wrapper">
+                <img src="https://images.samsung.com/is/image/samsung/p6pim/kr/2401/gallery/kr-galaxy-book4-pro-nt960xgk-k71a-539062391?$GM_PRD_W264_H264_FHD_PNG$" alt="Samsung Galaxy Book4 Pro" class="card-image">
+            </div>
+            <div class="card-content">
+                <h3>갤럭시 북4 Pro (2024)</h3>
+                <p class="description">
+                    얇고 가벼운 디자인, 선명한 AMOLED 디스플레이, 삼성 갤럭시 기기와의 강력한 연결성을 자랑하는 프리미엄 노트북입니다. 인텔 코어 Ultra 프로세서 탑재.
+                </p>
+                <p class="source">출처: 삼성전자 공식 웹사이트</p>
+                <a href="https://www.samsung.com/sec/galaxy-book/galaxy-book4-pro-nt960xgk-k71a/" class="button" target="_blank">자세히 보기</a>
+            </div>
+        </div>
+
+        <!-- 카드 4: Dell XPS 15 (2023/2024) -->
+        <div class="card" tabindex="0">
+            <div class="card-image-wrapper">
+                <img src="https://i.dell.com/is/image/Dell/xps-15-9530-pdp-gallery-1?fmt=png-alpha&wid=1140&hei=800" alt="Dell XPS 15" class="card-image">
+            </div>
+            <div class="card-content">
+                <h3>Dell XPS 15 (2023/2024)</h3>
+                <p class="description">
+                    전문가를 위한 강력한 성능과 아름다운 인피니티 엣지 디스플레이, 뛰어난 빌드 퀄리티를 갖춘 델의 대표 고성능 노트북입니다. 창의적인 작업에 최적화되었습니다.
+                </p>
+                <p class="source">출처: Dell 공식 웹사이트</p>
+                <a href="https://www.dell.com/ko-kr/shop/dell-laptops/xps-15-%EB%85%B8%ED%8A%B8%EB%B6%81/pd/xps-15-9530-laptop" class="button" target="_blank">자세히 보기</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,894 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tizen Tetris</title>
+    <!-- Google Fonts: Montserrat for clean text, Press Start 2P for retro game feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Font Awesome for control icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* CSS Variables for easy theme management */
+        :root {
+            --bg-color: #1a1a2e; /* Dark blue-purple */
+            --panel-bg: rgba(255, 255, 255, 0.1); /* Semi-transparent white for glassmorphism */
+            --border-color: rgba(255, 255, 255, 0.2); /* Lighter border for panels */
+            --text-color: #e0e0e0; /* Light grey for general text */
+            --accent-color: #0f3460; /* Darker blue for main container */
+            --focus-color: #e94560; /* Vibrant red for focus and highlights */
+            --shadow-color: rgba(0, 0, 0, 0.4); /* Dark shadow for depth */
+            --block-size: 30px; /* Base size of a Tetris block, adjusted by JS */
+        }
+
+        /* Base styles */
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling */
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            -webkit-user-select: none; /* Prevent text selection on Tizen TV */
+            user-select: none;
+        }
+
+        /* Main game container layout */
+        .game-container {
+            display: flex;
+            gap: 30px; /* Space between game elements */
+            background: var(--accent-color);
+            padding: 30px;
+            border-radius: 25px;
+            box-shadow: 0 15px 30px var(--shadow-color);
+            position: relative;
+            flex-wrap: wrap; /* Allow elements to wrap on smaller screens */
+            justify-content: center;
+            align-items: flex-start; /* Align items to the top */
+        }
+
+        /* Glassmorphism panel styling */
+        .game-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px); /* Glassmorphism blur effect */
+            -webkit-backdrop-filter: blur(10px); /* Webkit prefix for compatibility */
+            box-shadow: 0 8px 16px var(--shadow-color);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 180px; /* Minimum width for panels */
+        }
+
+        /* Panel headings */
+        .game-panel h2 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--focus-color);
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        /* Score and level display */
+        .score-display, .level-display {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        /* Next piece preview area */
+        .next-piece-display {
+            width: calc(var(--block-size) * 4); /* 4x4 grid for next piece */
+            height: calc(var(--block-size) * 4);
+            margin: 0 auto;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Main game canvas styling */
+        canvas#gameCanvas {
+            border: 5px solid var(--border-color);
+            border-radius: 10px;
+            background-color: #000; /* Black background for the game board */
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5); /* Inner shadow for depth */
+        }
+
+        /* Overlay for start/pause/game over screens */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); /* Dark semi-transparent background */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 25px;
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 100; /* Ensure overlay is on top */
+        }
+
+        .overlay h1 {
+            color: var(--focus-color);
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--focus-color); /* Glowing effect */
+        }
+
+        .overlay p {
+            color: var(--text-color);
+            font-size: 1.5em;
+            margin-bottom: 30px;
+        }
+
+        /* Overlay button styling (Start/Resume/Restart) */
+        .overlay button {
+            background-color: var(--focus-color);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.8em;
+            cursor: pointer;
+            transition: all 0.3s ease; /* Smooth transitions for hover/focus */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            outline: none; /* Remove default focus outline */
+        }
+
+        /* Button hover and focus effects (important for TV remote) */
+        .overlay button:hover,
+        .overlay button:focus {
+            background-color: #ff6b82; /* Lighter red */
+            transform: translateY(-5px) scale(1.05); /* Lift and slightly enlarge */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            outline: 3px solid var(--text-color); /* Custom focus outline */
+        }
+
+        /* Controls section */
+        .controls {
+            margin-top: 30px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 8px 16px var(--shadow-color);
+            max-width: 600px; /* Limit width for readability */
+            text-align: left;
+            width: 100%; /* Take full available width */
+            box-sizing: border-box;
+        }
+
+        .controls h2 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--focus-color);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        .controls ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid for controls */
+            gap: 10px;
+        }
+
+        .controls li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .controls .key-icon {
+            font-size: 1.5em;
+            color: var(--focus-color);
+            min-width: 30px; /* Ensure icon has consistent space */
+            text-align: center;
+        }
+
+        .key-text {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8em;
+            color: var(--text-color);
+        }
+
+        /* Responsive adjustments for various screen sizes, especially TVs */
+        @media (max-width: 1200px) {
+            .game-container {
+                flex-direction: column; /* Stack elements vertically */
+                align-items: center;
+                gap: 20px;
+                padding: 20px;
+            }
+            .game-panel {
+                min-width: auto;
+                width: 100%;
+                max-width: 300px; /* Limit panel width when stacked */
+            }
+            .controls {
+                max-width: 100%;
+            }
+            .overlay h1 {
+                font-size: 2.5em;
+            }
+            .overlay p {
+                font-size: 1.2em;
+            }
+            .overlay button {
+                padding: 15px 30px;
+                font-size: 1.5em;
+            }
+        }
+
+        @media (max-width: 768px) {
+             body {
+                padding: 10px;
+            }
+            .game-container {
+                padding: 15px;
+                gap: 15px;
+                border-radius: 15px;
+            }
+            .game-panel {
+                padding: 15px;
+                border-radius: 10px;
+                gap: 10px;
+            }
+            .game-panel h2 {
+                font-size: 1em;
+            }
+            .score-display, .level-display {
+                font-size: 1.5em;
+            }
+            .next-piece-display {
+                width: calc(var(--block-size) * 3); /* Adjust next piece size */
+                height: calc(var(--block-size) * 3);
+            }
+            .overlay h1 {
+                font-size: 2em;
+            }
+            .overlay p {
+                font-size: 1em;
+            }
+            .overlay button {
+                padding: 12px 25px;
+                font-size: 1.2em;
+            }
+            .controls h2 {
+                font-size: 1em;
+            }
+            .controls li {
+                padding: 8px 12px;
+            }
+            .controls .key-icon {
+                font-size: 1.2em;
+            }
+            .key-text {
+                font-size: 0.7em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div class="game-panel">
+            <h2>SCORE</h2>
+            <div id="score" class="score-display">0</div>
+            <h2>LEVEL</h2>
+            <div id="level" class="level-display">1</div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="game-panel">
+            <h2>NEXT</h2>
+            <canvas id="nextPieceCanvas" class="next-piece-display"></canvas>
+            <p style="font-size: 0.9em; margin-top: 15px; color: rgba(255,255,255,0.7);">Press 'Enter' to Pause/Start</p>
+        </div>
+
+        <!-- Game Overlay for Start/Pause/Game Over -->
+        <div id="startOverlay" class="overlay">
+            <h1>TIZEN TETRIS</h1>
+            <p id="overlayMessage">Press 'Enter' to Start</p>
+            <button id="startButton"><i class="fas fa-play"></i> START GAME</button>
+        </div>
+    </div>
+
+    <!-- Controls Information for Tizen Remote -->
+    <div class="controls">
+        <h2>CONTROLS</h2>
+        <ul>
+            <li><span class="key-icon"><i class="fas fa-arrow-up"></i></span> <span class="key-text">Rotate</span></li>
+            <li><span class="key-icon"><i class="fas fa-arrow-down"></i></span> <span class="key-text">Soft Drop</span></li>
+            <li><span class="key-icon"><i class="fas fa-arrow-left"></i></span> <span class="key-text">Move Left</span></li>
+            <li><span class="key-icon"><i class="fas fa-arrow-right"></i></span> <span class="key-text">Move Right</span></li>
+            <li><span class="key-icon"><i class="fas fa-keyboard"></i></span> <span class="key-text">Hard Drop (Spacebar)</span></li>
+            <li><span class="key-icon"><i class="fas fa-hand-pointer"></i></span> <span class="key-text">Start/Pause/Restart (Enter/OK)</span></li>
+        </ul>
+    </div>
+
+    <script>
+        // Tizen Remote Key Codes (Standard HTML keyCode values)
+        const KEY_UP = 38;
+        const KEY_DOWN = 40;
+        const KEY_LEFT = 37;
+        const KEY_RIGHT = 39;
+        const KEY_ENTER = 13; // Tizen 'OK' or 'Enter' key
+        const KEY_SPACE = 32; // Standard keyboard Spacebar for hard drop
+
+        // Game Constants
+        const COLS = 10;
+        const ROWS = 20;
+        let BLOCK_SIZE = 30; // Initial block size, will be adjusted dynamically
+        const INITIAL_DROP_INTERVAL = 1000; // milliseconds for piece to fall one step
+        const ACCELERATED_DROP_INTERVAL = 50; // milliseconds for soft drop
+
+        // Canvas elements and their 2D rendering contexts
+        const gameCanvas = document.getElementById('gameCanvas');
+        const nextPieceCanvas = document.getElementById('nextPieceCanvas');
+        const gameCtx = gameCanvas.getContext('2d');
+        const nextPieceCtx = nextPieceCanvas.getContext('2d');
+
+        // Game state variables
+        let board = []; // 2D array representing the game board
+        let currentPiece; // The active Tetromino
+        let nextPiece;    // The next Tetromino to appear
+        let score = 0;
+        let level = 1;
+        let dropInterval = INITIAL_DROP_INTERVAL; // Current speed of piece falling
+        let lastDropTime = 0; // Timestamp of the last piece drop
+        let gameOver = true;
+        let paused = false;
+        let animationFrameId; // Stores the ID of the requestAnimationFrame loop
+
+        // DOM elements for displaying game info and controlling overlays
+        const scoreDisplay = document.getElementById('score');
+        const levelDisplay = document.getElementById('level');
+        const startOverlay = document.getElementById('startOverlay');
+        const startButton = document.getElementById('startButton');
+        const overlayMessage = document.getElementById('overlayMessage');
+
+        // Definitions of Tetromino shapes and their colors
+        const TETROMINOES = [
+            // I-piece (Cyan)
+            { shape: [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]], color: '#00FFFF' },
+            // J-piece (Blue)
+            { shape: [[1,0,0], [1,1,1], [0,0,0]], color: '#0000FF' },
+            // L-piece (Orange)
+            { shape: [[0,0,1], [1,1,1], [0,0,0]], color: '#FFA500' },
+            // O-piece (Yellow)
+            { shape: [[1,1], [1,1]], color: '#FFFF00' },
+            // S-piece (Green)
+            { shape: [[0,1,1], [1,1,0], [0,0,0]], color: '#008000' },
+            // T-piece (Purple)
+            { shape: [[0,1,0], [1,1,1], [0,0,0]], color: '#800080' },
+            // Z-piece (Red)
+            { shape: [[1,1,0], [0,1,1], [0,0,0]], color: '#FF0000' }
+        ];
+
+        // --- Helper Functions ---
+
+        /**
+         * Dynamically adjusts BLOCK_SIZE based on the window's dimensions
+         * to ensure good visibility on various screen sizes, especially TVs.
+         */
+        function adjustBlockSize() {
+            // Calculate potential block size based on height and width
+            // Prioritize fitting height first, then adjust for width
+            let newSize = Math.floor(window.innerHeight / (ROWS + 2)); // +2 for some padding
+            const maxWidthForBoard = window.innerWidth * 0.45; // Max 45% of width for game board
+            if (newSize * COLS > maxWidthForBoard) {
+                newSize = Math.floor(maxWidthForBoard / COLS);
+            }
+            
+            // Constrain block size within reasonable limits
+            const minBlockSize = 20;
+            const maxBlockSize = 45;
+            BLOCK_SIZE = Math.max(minBlockSize, Math.min(maxBlockSize, newSize));
+            
+            // Apply calculated block size to canvas dimensions
+            gameCanvas.width = COLS * BLOCK_SIZE;
+            gameCanvas.height = ROWS * BLOCK_SIZE;
+            nextPieceCanvas.width = BLOCK_SIZE * 4; // Next piece preview is 4x4
+            nextPieceCanvas.height = BLOCK_SIZE * 4;
+
+            // Update CSS variable for other elements dependent on block size
+            document.documentElement.style.setProperty('--block-size', `${BLOCK_SIZE}px`);
+        }
+
+        /**
+         * Draws a single square block on a specified canvas context.
+         * @param {number} x - x-coordinate of the block (in board units).
+         * @param {number} y - y-coordinate of the block (in board units).
+         * @param {string} color - CSS color string for the block.
+         * @param {CanvasRenderingContext2D} ctx - The canvas context to draw on.
+         * @param {number} [offsetX=0] - Additional x-offset for drawing (in pixels).
+         * @param {number} [offsetY=0] - Additional y-offset for drawing (in pixels).
+         */
+        function drawBlock(x, y, color, ctx, offsetX = 0, offsetY = 0) {
+            if (color === '#000' || !color) return; // Don't draw empty or transparent blocks
+
+            ctx.fillStyle = color;
+            ctx.strokeStyle = '#333'; // Darker border for block separation
+            ctx.lineWidth = 1;
+
+            const drawX = x * BLOCK_SIZE + offsetX;
+            const drawY = y * BLOCK_SIZE + offsetY;
+
+            // Draw the main block body
+            ctx.fillRect(drawX, drawY, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeRect(drawX, drawY, BLOCK_SIZE, BLOCK_SIZE);
+
+            // Add a subtle gradient for a modern, slightly 3D effect
+            const gradient = ctx.createLinearGradient(drawX, drawY, drawX + BLOCK_SIZE, drawY + BLOCK_SIZE);
+            gradient.addColorStop(0, `rgba(255, 255, 255, 0.2)`); // Top-left highlight
+            gradient.addColorStop(1, `rgba(0, 0, 0, 0.2)`);     // Bottom-right shadow
+            ctx.fillStyle = gradient;
+            ctx.fillRect(drawX, drawY, BLOCK_SIZE, BLOCK_SIZE);
+        }
+
+        /**
+         * Draws the entire game board, including existing locked blocks and grid lines.
+         */
+        function drawBoard() {
+            // Draw all locked blocks on the board
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    drawBlock(c, r, board[r][c], gameCtx);
+                }
+            }
+
+            // Draw subtle grid lines for better visual guidance
+            gameCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            gameCtx.lineWidth = 0.5;
+            for (let r = 0; r < ROWS; r++) {
+                gameCtx.beginPath();
+                gameCtx.moveTo(0, r * BLOCK_SIZE);
+                gameCtx.lineTo(gameCanvas.width, r * BLOCK_SIZE);
+                gameCtx.stroke();
+            }
+            for (let c = 0; c < COLS; c++) {
+                gameCtx.beginPath();
+                gameCtx.moveTo(c * BLOCK_SIZE, 0);
+                gameCtx.lineTo(c * BLOCK_SIZE, gameCanvas.height);
+                gameCtx.stroke();
+            }
+        }
+
+        /**
+         * Draws a given tetromino piece on a specified canvas context.
+         * Used for both the current falling piece and the next piece preview.
+         * @param {object} piece - The piece object { x, y, shape, color }.
+         * @param {CanvasRenderingContext2D} ctx - The canvas context to draw on.
+         * @param {number} [offsetX=0] - Additional x-offset for drawing (in pixels).
+         * @param {number} [offsetY=0] - Additional y-offset for drawing (in pixels).
+         */
+        function drawPiece(piece, ctx, offsetX = 0, offsetY = 0) {
+            if (!piece) return; // Do nothing if no piece is provided
+            piece.shape.forEach((row, r) => {
+                row.forEach((value, c) => {
+                    if (value) { // Only draw if the cell is part of the piece's shape
+                        drawBlock(piece.x + c, piece.y + r, piece.color, ctx, offsetX, offsetY);
+                    }
+                });
+            });
+        }
+
+        /**
+         * Generates a random tetromino piece from the predefined TETROMINOES array.
+         * @returns {object} A new piece object with its initial position and color.
+         */
+        function generateRandomPiece() {
+            const randIndex = Math.floor(Math.random() * TETROMINOES.length);
+            const pieceTemplate = TETROMINOES[randIndex];
+            return {
+                x: Math.floor(COLS / 2) - Math.floor(pieceTemplate.shape[0].length / 2), // Centered horizontally
+                y: 0, // Starts at the top of the board
+                shape: pieceTemplate.shape,
+                color: pieceTemplate.color
+            };
+        }
+
+        /**
+         * Checks if a proposed move (position and/or shape change) for a piece is valid.
+         * This means it doesn't collide with existing blocks or go out of board boundaries.
+         * @param {object} piece - The piece to check.
+         * @param {number} offsetX - Horizontal offset for the move.
+         * @param {number} offsetY - Vertical offset for the move.
+         * @param {Array<Array<number>>} newShape - The new shape to check (for rotations).
+         * @returns {boolean} True if the move is valid, false otherwise.
+         */
+        function isValidMove(piece, offsetX, offsetY, newShape) {
+            for (let r = 0; r < newShape.length; r++) {
+                for (let c = 0; c < newShape[r].length; c++) {
+                    if (newShape[r][c] === 0) continue; // Skip empty cells within the piece's bounding box
+
+                    const boardX = piece.x + c + offsetX;
+                    const boardY = piece.y + r + offsetY;
+
+                    // Check for horizontal boundaries (left and right)
+                    if (boardX < 0 || boardX >= COLS) {
+                        return false;
+                    }
+                    // Check for bottom boundary
+                    if (boardY >= ROWS) {
+                        return false;
+                    }
+                    // Check collision with existing blocks on the board
+                    // Ensure boardY is within bounds before accessing `board[boardY]`
+                    if (boardY >= 0 && board[boardY] && board[boardY][boardX] !== 0) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        /**
+         * Moves the current piece horizontally by one unit.
+         * @param {number} direction - -1 for left, 1 for right.
+         */
+        function movePiece(direction) {
+            if (gameOver || paused) return;
+            if (isValidMove(currentPiece, direction, 0, currentPiece.shape)) {
+                currentPiece.x += direction;
+                draw(); // Redraw immediately after movement
+            }
+        }
+
+        /**
+         * Rotates the current piece clockwise. Includes basic wall kick logic.
+         */
+        function rotatePiece() {
+            if (gameOver || paused) return;
+            const originalShape = currentPiece.shape;
+            const originalX = currentPiece.x;
+
+            // Perform a simple clockwise rotation
+            const newShape = originalShape[0].map((_, index) => originalShape.map(row => row[index]).reverse());
+
+            // Basic wall kick: try to shift the piece if rotation causes collision
+            const offsets = [0, 1, -1, 2, -2]; // Common wall kick offsets
+            for (const offset of offsets) {
+                if (isValidMove(currentPiece, offset, 0, newShape)) {
+                    currentPiece.shape = newShape;
+                    currentPiece.x += offset;
+                    draw();
+                    return; // Rotation successful
+                }
+            }
+            // If no valid rotation position found, revert to original
+            currentPiece.shape = originalShape;
+            currentPiece.x = originalX;
+        }
+
+        /**
+         * Drops the piece down by one row. If it lands, locks it and generates a new piece.
+         * @param {boolean} [accelerated=false] - If true, it's a soft drop (faster, awards points).
+         * @returns {boolean} True if the piece landed, false if it moved down.
+         */
+        function dropPiece(accelerated = false) {
+            if (gameOver || paused) return false;
+
+            if (isValidMove(currentPiece, 0, 1, currentPiece.shape)) {
+                currentPiece.y++;
+                if (accelerated) {
+                    score += 1; // Award points for soft drop
+                }
+                draw();
+                return false; // Piece moved down
+            } else {
+                // Piece has landed
+                lockPiece();
+                clearLines();
+                newPiece(); // Generate next piece
+                return true; // Piece landed
+            }
+        }
+
+        /**
+         * Instantly drops the current piece to the lowest possible valid position.
+         */
+        function hardDrop() {
+            if (gameOver || paused) return;
+            while (isValidMove(currentPiece, 0, 1, currentPiece.shape)) {
+                currentPiece.y++;
+                score += 2; // Award more points for hard drop
+            }
+            lockPiece();
+            clearLines();
+            newPiece();
+            draw(); // Redraw after hard drop
+        }
+
+        /**
+         * Locks the current piece's blocks into the permanent game board array.
+         */
+        function lockPiece() {
+            currentPiece.shape.forEach((row, r) => {
+                row.forEach((value, c) => {
+                    if (value) {
+                        const boardY = currentPiece.y + r;
+                        const boardX = currentPiece.x + c;
+                        // Basic bounds check (should be covered by isValidMove, but good for safety)
+                        if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+                            board[boardY][boardX] = currentPiece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        /**
+         * Checks for and clears any full lines on the board.
+         * Shifts blocks down and updates the score.
+         */
+        function clearLines() {
+            let linesCleared = 0;
+            for (let r = ROWS - 1; r >= 0; r--) {
+                if (board[r].every(cell => cell !== 0)) {
+                    // This line is full!
+                    linesCleared++;
+                    // Remove the full line and add a new empty one at the top
+                    board.splice(r, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    r++; // Re-check the same row index, as a new line has shifted down into it
+                }
+            }
+            if (linesCleared > 0) {
+                updateScore(linesCleared);
+                updateLevel();
+            }
+        }
+
+        /**
+         * Updates the player's score based on the number of lines cleared.
+         * @param {number} linesCleared - The number of lines cleared in one go.
+         */
+        function updateScore(linesCleared) {
+            const pointsPerLine = [0, 100, 300, 500, 800]; // Points for 0, 1, 2, 3, 4 lines
+            score += pointsPerLine[linesCleared] * level;
+            scoreDisplay.textContent = score;
+        }
+
+        /**
+         * Updates the game level based on the current score.
+         * Increases drop speed when level increases.
+         */
+        function updateLevel() {
+            const newLevel = Math.floor(score / 1000) + 1; // Example: increase level every 1000 points
+            if (newLevel > level) {
+                level = newLevel;
+                levelDisplay.textContent = level;
+                // Decrease drop interval (increase speed), with a minimum speed limit
+                dropInterval = Math.max(50, INITIAL_DROP_INTERVAL - (level - 1) * 70);
+            }
+        }
+
+        /**
+         * Sets the current piece to the next piece and generates a new next piece.
+         * Checks if the new current piece immediately collides, which means game over.
+         */
+        function newPiece() {
+            currentPiece = nextPiece;
+            nextPiece = generateRandomPiece();
+            // Check for immediate game over condition (piece spawns inside existing blocks)
+            if (!isValidMove(currentPiece, 0, 0, currentPiece.shape)) {
+                endGame();
+            }
+        }
+
+        /**
+         * Initializes the game board with empty cells.
+         */
+        function initBoard() {
+            board = Array(ROWS).fill(0).map(() => Array(COLS).fill(0));
+        }
+
+        /**
+         * The main game loop, responsible for updating game state and drawing.
+         * Uses requestAnimationFrame for smooth animations.
+         * @param {DOMHighResTimeStamp} currentTime - The current time provided by requestAnimationFrame.
+         */
+        function gameLoop(currentTime = 0) {
+            if (gameOver || paused) return; // Stop loop if game is over or paused
+
+            const deltaTime = currentTime - lastDropTime;
+
+            if (deltaTime > dropInterval) {
+                dropPiece(); // Attempt to drop the piece
+                lastDropTime = currentTime;
+            }
+
+            draw(); // Redraw the game state
+            animationFrameId = requestAnimationFrame(gameLoop); // Schedule next frame
+        }
+
+        /**
+         * Draws all game elements on both canvases (game board and next piece preview).
+         */
+        function draw() {
+            // Clear and redraw game canvas
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            drawBoard();
+            drawPiece(currentPiece, gameCtx);
+
+            // Clear and redraw next piece canvas
+            nextPieceCtx.clearRect(0, 0, nextPieceCanvas.width, nextPieceCanvas.height);
+            if (nextPiece) {
+                // Center the next piece in its preview canvas
+                const shapeWidth = nextPiece.shape[0].length;
+                const shapeHeight = nextPiece.shape.length;
+                const pieceOffsetX = (nextPieceCanvas.width - (shapeWidth * BLOCK_SIZE)) / 2;
+                const pieceOffsetY = (nextPieceCanvas.height - (shapeHeight * BLOCK_SIZE)) / 2;
+                
+                // Draw piece relative to its own 0,0, but with offset for centering
+                nextPiece.shape.forEach((row, r) => {
+                    row.forEach((value, c) => {
+                        if (value) {
+                            drawBlock(c, r, nextPiece.color, nextPieceCtx, pieceOffsetX, pieceOffsetY);
+                        }
+                    });
+                });
+            }
+        }
+
+        /**
+         * Resets game state and starts a new game.
+         */
+        function startGame() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId); // Stop any existing game loop
+            }
+            initBoard();
+            score = 0;
+            level = 1;
+            dropInterval = INITIAL_DROP_INTERVAL;
+            scoreDisplay.textContent = score;
+            levelDisplay.textContent = level;
+            nextPiece = generateRandomPiece(); // Initialize next piece
+            newPiece(); // Set currentPiece and generate a new nextPiece
+            gameOver = false;
+            paused = false;
+            startOverlay.style.display = 'none'; // Hide overlay
+            gameLoop(); // Start the game loop
+            startButton.blur(); // Remove focus from the button after click/enter
+        }
+
+        /**
+         * Sets the game to 'game over' state and displays the game over overlay.
+         */
+        function endGame() {
+            gameOver = true;
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId); // Stop the game loop
+            }
+            overlayMessage.textContent = `Game Over! Your Score: ${score}. Press 'Enter' to Restart`;
+            startButton.textContent = 'RESTART GAME';
+            startOverlay.style.display = 'flex'; // Show overlay
+            startButton.focus(); // Focus the restart button for easy remote interaction
+        }
+
+        /**
+         * Toggles the game's pause state.
+         */
+        function togglePause() {
+            if (gameOver) return; // Cannot pause if game is over
+            paused = !paused;
+            if (paused) {
+                cancelAnimationFrame(animationFrameId); // Stop game loop
+                overlayMessage.textContent = 'PAUSED. Press \'Enter\' to Resume';
+                startButton.textContent = 'RESUME GAME';
+                startOverlay.style.display = 'flex'; // Show pause overlay
+                startButton.focus();
+            } else {
+                startOverlay.style.display = 'none'; // Hide overlay
+                lastDropTime = performance.now(); // Reset timer to prevent immediate drop on resume
+                gameLoop(); // Resume game loop
+                startButton.blur();
+            }
+        }
+
+        // --- Event Listeners ---
+
+        // Handle button clicks on the overlay
+        startButton.addEventListener('click', () => {
+            if (gameOver) {
+                startGame();
+            } else if (paused) {
+                togglePause();
+            }
+        });
+
+        // Handle keyboard/Tizen remote key presses
+        document.addEventListener('keydown', e => {
+            // If overlay is active and it's not the Enter key, ignore other inputs
+            if (startOverlay.style.display === 'flex' && e.keyCode !== KEY_ENTER) {
+                return;
+            }
+
+            // Handle Enter key for starting/restarting/resuming the game
+            if (e.keyCode === KEY_ENTER) {
+                if (gameOver) {
+                    startGame();
+                    return;
+                }
+                if (paused) {
+                    togglePause();
+                    return;
+                }
+                // If game is active and not paused, Enter key performs hard drop
+                if (!gameOver && !paused) {
+                    hardDrop();
+                    e.preventDefault(); // Prevent default browser action (e.g., scrolling)
+                    return;
+                }
+            }
+
+            // Ignore other keys if game is over or paused
+            if (gameOver || paused) return;
+
+            // Game controls
+            switch (e.keyCode) {
+                case KEY_LEFT:
+                    movePiece(-1);
+                    break;
+                case KEY_RIGHT:
+                    movePiece(1);
+                    break;
+                case KEY_UP:
+                    rotatePiece();
+                    break;
+                case KEY_DOWN:
+                    dropPiece(true); // Soft drop
+                    break;
+                case KEY_SPACE: // Spacebar for hard drop (keyboard only)
+                    hardDrop();
+                    break;
+                // No default case to prevent unintended actions from other keys
+            }
+            e.preventDefault(); // Prevent default browser actions (e.g., scrolling)
+        });
+
+        // Initialize the game when the page loads
+        window.addEventListener('load', () => {
+            adjustBlockSize(); // Set initial canvas sizes
+            initBoard(); // Clear the board
+            draw(); // Draw the empty board
+            startButton.focus(); // Focus the start button for Tizen remote navigation
+        });
+
+        // Re-adjust block size if the window is resized (e.g., screen orientation change, or window resize on desktop)
+        window.addEventListener('resize', adjustBlockSize);
+
+    </script>
+</body>
+</html>
+```

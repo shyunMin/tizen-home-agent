@@ -9,7 +9,7 @@ from langgraph.graph.message import add_messages
 # 전역 설정
 # ---------------------------------------------------------------------------
 PORT = 10010
-AI_RESPONSE_TIMEOUT = 60  # 초
+AI_RESPONSE_TIMEOUT = 120  # 초 (단순 대화는 빠르지만, 앱 생성 시에는 시간이 더 걸릴 수 있음)
 
 # 앱 시작 시 채워지는 전역 도구 목록 (Tizen SDB 도구)
 # main.py의 lifespan에서 초기화됩니다.
@@ -57,7 +57,7 @@ class A2uiResponse(BaseModel):
 # Structured Output: Router 결과
 # ---------------------------------------------------------------------------
 
-TaskType = Literal["general_chat", "search", "device_control", "draw_a2ui", "briefing", "app_deploy"]
+TaskType = Literal["general_chat", "search", "device_control", "draw_a2ui", "briefing", "app_deploy", "youtube_play", "genui"]
 
 class RouterResult(BaseModel):
     """Router 노드의 구조화된 출력."""
