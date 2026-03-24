@@ -428,7 +428,7 @@ async def youtube_worker_node(state: AgentState) -> Dict[str, Any]:
 <meta charset="utf-8">
 <title>{video_title}</title>
 <style>
-  body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; color: white; font-family: sans-serif; }}
+  body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; min-height: 400px; background-color: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; color: white; font-family: sans-serif; }}
   h1 {{ font-size: 2rem; }}
 </style>
 <script>
