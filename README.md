@@ -278,7 +278,6 @@ python test.py
 | **HTML 생성** | "날씨 위젯 그려줘", "계산기 만들어줘" | `HTML 생성 에이전트`가 도구 없이 단일 HTML 코드 생성 |
 | **유튜브 검색** | "아기상어 틀어줘" | `YouTube Agent`가 영상을 검색해 플레이 가능한 HTML로 만들어 화면에 표시 |
 | **화면 분석** | "화면에 뭐 있는지 알려줘", "Tizen" 이라는 글자 화면에 있어?" | `Vision Agent`가 기기 화면을 캡처하여 현재 화면에 있는 텍스트 및 이미지 설명 |
-| **원격 터치 테스트** | (CLI 도구 활용) | `test_input.py`를 통해 특정 좌표(X, Y)로 원격 터치 이벤트 전송 및 테스트 |
 
 <img width="1280" height="720" alt="tizen_screenshot_20260325_113721" src="https://github.com/user-attachments/assets/df39b7b6-297d-417f-b36f-f59f5de16add" />
 <img width="1280" height="720" alt="tizen_screenshot_20260325_113801" src="https://github.com/user-attachments/assets/36b695e8-8cce-4d25-84c5-047007049771" />
@@ -293,6 +292,5 @@ MIT License
 **마지막 수정 날짜:** 2026-03-25 14:25
 
 **수정 사항:** 
-1. **원격 입력 테스트 도구 안정화**: `test_input.py`에 아키텍처(32/64비트) 자동 감지 로직을 추가하고, 바이너리 유실을 방지하기 위해 'SDB Push & Remote Cat' 방식으로 입력 전송 방식을 개선했습니다.
-2. **다국어(한/영) 주도적 추천 강화**: 영어 질문 시에도 추가 질문 없이 트렌드를 분석하여 즉시 추천 결과를 제공합니다.
+1. **다국어(한/영) 주도적 추천 강화**: 영어 질문 시에도 추가 질문 없이 트렌드를 분석하여 즉시 추천 결과를 제공합니다.
 
