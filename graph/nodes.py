@@ -544,6 +544,11 @@ async def vision_worker_node(state: AgentState) -> Dict[str, Any]:
     """Vision Agent Node: 기기 화면을 캡처하고 멀티모달 LLM으로 분석하여 설명합니다."""
     print("[vision_worker_node] Capturing screen and analyzing contents...")
     
+    last_human = next(
+        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
+        "",
+    )
+    
     serial = get_device_serial()
     local_filename = f"capture_{serial}.png"
     remote_tmp = f"/tmp/{local_filename}"
@@ -576,9 +581,10 @@ async def vision_worker_node(state: AgentState) -> Dict[str, Any]:
         llm = make_llm("gemini-2.5-flash") # 비전 기능 강화를 위해 2.5-flash 사용
         
         prompt = (
-            "이 사진은 현재 Tizen 기기 화면이야. 화면에 어떤 앱이나 콘텐츠가 실행 중인지, 텍스트나 아이콘 정보가 무엇인지 상세하게 분석해서 설명해줘.\n"
-            "특히 사용자가 특정 요소의 위치나 크기를 묻는 경우, 해당 객체의 영역(Bounding Box)을 [ymin, xmin, ymax, xmax] (0-1000 정규화된 좌표) 형식으로 포함해줘.\n"
-            "또한, 해당 요소를 직접 클릭할 수 있는 중심 좌표(Center X, Center Y)도 함께 계산해서 알려줘 (0-1000 범위)."
+            f"사용자 요청: {last_human}\n\n"
+            "위 요청에 따라 Tizen 기기 화면을 분석하세요.\n"
+            "- 사용자가 특정 요소의 '위치', '어디', '좌표', '클릭' 등을 물어보는 경우: 전체 화면 설명은 생략하고, 해당 객체의 영역 [ymin, xmin, ymax, xmax] (0-1000 정규화 좌표)와 중심 클릭 지점(Center X, Center Y) 정보만 간결하고 명확하게 출력하세요.\n"
+            "- 사용자가 단순히 '설명', '이미지 읽어줘', '뭐 있어?' 등 화면 전체 내용을 궁금해하는 경우: 좌표 정보는 생략하고 화면의 전반적인 구성과 내용을 친절하게 설명하세요."
         )
         
         message = HumanMessage(
