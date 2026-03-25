@@ -50,7 +50,7 @@ graph TD
 
 
 ### 동작 순서
-1. **1단계 (Router)**: 사용자의 메시지가 입력되면 **오케스트레이터 (Orchestrator)**가 요청의 의도를 분석하여 `general_chat`, `search`, `device_control`, `draw_ui`, `briefing`, `youtube_play`, `vision` 중 필요한 태스크를 결정합니다.
+1. **1단계 (Orchestrator)**: 사용자의 메시지가 입력되면 요청의 의도를 분석하여 `general_chat`, `search`, `device_control`, `draw_ui`, `briefing`, `youtube_play`, `vision` 중 필요한 태스크를 결정합니다.
 2. **2단계 (Agent)**: 분류된 태스크에 따라 7종의 **전담 에이전트(Agent)**들이 병렬로 실행됩니다.
     - **대화 에이전트 (ChatAgent)**: 인사, 일상 대화 등 외부 정보가 필요 없는 답변을 담당합니다.
     - **웹 검색 에이전트 (WebSearchAgent)**: 사용자의 의도에 따라 Google 검색으로 최신 정보를 찾고, 관련 웹 페이지 URL을 추출하여 반환합니다.
@@ -267,18 +267,17 @@ python test.py
 
 ## 주요 테스트 케이스
 
-Router-Agent 아키텍처의 각 에이전트가 정상적으로 동작하는지 확인할 수 있는 샘플 케이스입니다.
+각 에이전트가 정상적으로 동작하는지 확인할 수 있는 샘플 케이스입니다.
 
 | 카테고리 | 테스트 메시지 | 기대 동작 |
 | :--- | :--- | :--- |
 | **일반 대화** | "안녕? 넌 누구니?" | `Chat Agent`가 응답 (검색 없이 일상 대화) |
-| **웹 검색** | "오늘 서울 우면동 날씨가 어때?" | `Web Search Agent`가 정보를 검색하고 관련 페이지 URL을 기기 화면에 표시 |
-| **브리핑** | "오늘 주요 뉴스 브리핑해줘" | `Briefing Agent`가 최신 뉴스를 조사하여 카드 뉴스 HTML을 만들어 TV에 배포 및 실행 |
+| **웹 검색** | "오늘 서울 우면동 날씨가 어때?" | `Web Search Agent`가 정보를 검색하고 관련 페이지 URL을 화면에 표시 |
+| **브리핑** | "오늘 주요 뉴스 브리핑해줘" | `Briefing Agent`가 검색을 통해 추천 컨텐츠를 카드 뷰 형태로 화면에 표시 |
 | **기기 제어** | "거실 TV 켜줘" / "볼륨 높여줘" | `Device Agent`가 SDB 명령 후 제어 결과 상태(성공/실패) 반환 |
 | **HTML 생성** | "영화 예약 화면 하나 그려줘" | `HTML 생성 에이전트`가 도구 없이 단일 HTML 코드 생성 |
-| **복합 요청** | "안녕? 에어컨 켜고 오늘 날씨 알려줘" | `Router`가 2개 이상의 태스크로 분류 후 각 에이전트의 결과를 통합하여 응답 |
-| **유튜브 검색** | "아이유의 좋은날 유튜브에서 재생해줘" | `YouTube Agent`가 영상을 검색해 플레이 가능한 HTML로 만들고 TV에서 자동 재생 |
-| **화면 분석** | "화면에 뭐 있는지 알려줘" | `Vision Agent`가 기기 화면을 캡처하여 현재 실행 중인 콘텐츠를 설명 |
+| **유튜브 검색** | "아이유의 좋은날 유튜브에서 재생해줘" | `YouTube Agent`가 영상을 검색해 플레이 가능한 HTML로 만들어 화면에 표시 |
+| **화면 분석** | "화면에 뭐 있는지 알려줘" | `Vision Agent`가 기기 화면을 캡처하여 현재 화면에 있는 텍스트및 이미지 설명 |
 
 <img width="1280" height="720" alt="tizen_screenshot_20260325_113721" src="https://github.com/user-attachments/assets/df39b7b6-297d-417f-b36f-f59f5de16add" />
 <img width="1280" height="720" alt="tizen_screenshot_20260325_113801" src="https://github.com/user-attachments/assets/36b695e8-8cce-4d25-84c5-047007049771" />
