@@ -573,7 +573,7 @@ async def vision_worker_node(state: AgentState) -> Dict[str, Any]:
             encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
             
         # 4. LLM 멀티모달 분석 요청
-        llm = make_llm("gemini-1.5-flash") # 비전 기능 강화를 위해 1.5-flash 이상 권장
+        llm = make_llm("gemini-2.5-flash") # 비전 기능 강화를 위해 2.5-flash 사용
         
         prompt = "이 사진은 현재 Tizen 기기 화면이야. 화면에 어떤 앱이나 콘텐츠가 실행 중인지, 텍스트나 아이콘 정보가 무엇인지 상세하게 분석해서 설명해줘."
         
