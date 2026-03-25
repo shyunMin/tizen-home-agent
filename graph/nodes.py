@@ -575,7 +575,11 @@ async def vision_worker_node(state: AgentState) -> Dict[str, Any]:
         # 4. LLM 멀티모달 분석 요청
         llm = make_llm("gemini-2.5-flash") # 비전 기능 강화를 위해 2.5-flash 사용
         
-        prompt = "이 사진은 현재 Tizen 기기 화면이야. 화면에 어떤 앱이나 콘텐츠가 실행 중인지, 텍스트나 아이콘 정보가 무엇인지 상세하게 분석해서 설명해줘."
+        prompt = (
+            "이 사진은 현재 Tizen 기기 화면이야. 화면에 어떤 앱이나 콘텐츠가 실행 중인지, 텍스트나 아이콘 정보가 무엇인지 상세하게 분석해서 설명해줘.\n"
+            "특히 사용자가 특정 요소의 위치나 크기를 묻는 경우, 해당 객체의 영역(Bounding Box)을 [ymin, xmin, ymax, xmax] (0-1000 정규화된 좌표) 형식으로 포함해줘.\n"
+            "또한, 해당 요소를 직접 클릭할 수 있는 중심 좌표(Center X, Center Y)도 함께 계산해서 알려줘 (0-1000 범위)."
+        )
         
         message = HumanMessage(
             content=[
