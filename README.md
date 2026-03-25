@@ -279,6 +279,8 @@ python test.py
 | **유튜브 검색** | "아기상어 틀어줘" | `YouTube Agent`가 영상을 검색해 플레이 가능한 HTML로 만들어 화면에 표시 |
 | **화면 분석** | "화면에 뭐 있는지 알려줘", "Tizen" 이라는 글자 화면에 있어?" | `Vision Agent`가 기기 화면을 캡처하여 현재 화면에 있는 텍스트 및 이미지 설명 |
 
+<img width="1280" height="720" alt="tizen_screenshot_20260325_161401" src="https://github.com/user-attachments/assets/ac7d2b50-a7d7-48f6-a44a-5ffc0c5ed080" />
+<img width="1280" height="720" alt="tizen_screenshot_20260325_161513" src="https://github.com/user-attachments/assets/6ec4018c-964d-4417-815e-86ad0130d1c7" />
 <img width="1280" height="720" alt="tizen_screenshot_20260325_113721" src="https://github.com/user-attachments/assets/df39b7b6-297d-417f-b36f-f59f5de16add" />
 <img width="1280" height="720" alt="tizen_screenshot_20260325_113801" src="https://github.com/user-attachments/assets/36b695e8-8cce-4d25-84c5-047007049771" />
 <img width="1280" height="720" alt="tizen_screenshot_20260325_114220" src="https://github.com/user-attachments/assets/fc0fbb95-1065-48ee-bb72-0651e23d8726" />
