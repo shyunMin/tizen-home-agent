@@ -280,6 +280,12 @@ Router-Agent 아키텍처의 각 에이전트가 정상적으로 동작하는지
 | **유튜브 검색** | "아이유의 좋은날 유튜브에서 재생해줘" | `YouTube Agent`가 영상을 검색해 플레이 가능한 HTML로 만들고 TV에서 자동 재생 |
 | **화면 분석** | "화면에 뭐 있는지 알려줘" | `Vision Agent`가 기기 화면을 캡처하여 현재 실행 중인 콘텐츠를 설명 |
 
+<img width="1280" height="720" alt="tizen_screenshot_20260325_113721" src="https://github.com/user-attachments/assets/df39b7b6-297d-417f-b36f-f59f5de16add" />
+<img width="1280" height="720" alt="tizen_screenshot_20260325_113801" src="https://github.com/user-attachments/assets/36b695e8-8cce-4d25-84c5-047007049771" />
+<img width="1280" height="720" alt="tizen_screenshot_20260325_114220" src="https://github.com/user-attachments/assets/fc0fbb95-1065-48ee-bb72-0651e23d8726" />
+<img width="1280" height="720" alt="tizen_screenshot_20260325_114358" src="https://github.com/user-attachments/assets/447991a0-cae9-4577-90ac-295c4cb3d465" />
+<img width="1280" height="720" alt="tizen_screenshot_20260325_113518" src="https://github.com/user-attachments/assets/e36ad6ce-1b26-46bd-b850-e32e910a0258" />
+
 ## 라이선스
 MIT License
 
