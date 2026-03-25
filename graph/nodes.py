@@ -9,7 +9,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 import config
 from graph.state import AgentState, WorkerResult
-from utils.sdb_handler import execute_tizen_action, get_device_serial
+from utils.sdb_handler import execute_tizen_action, get_device_serial, get_screen_resolution
 from utils.helpers import extract_json
 
 # ---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
     )
 
     system_prompt = (
-        "너는 사용자의 요청을 분석하여 적절한 작업(Task)으로 분류하는 Router Agent야. "
+        "너는 사용자의 요청을 분석하여 적절한 작업(Task)으로 분류하는 'Home Agent'야. "
         "사용자 입력에 따라 아래 Task 종류 중 가장 적절한 것들을 선택해.\n"
         "1. general_chat: 단순 인사, 일상 대화, 간단한 질문 (예: '안녕', '넌 누구니?')\n"
         "2. search: 최신 정보, 날씨, 뉴스 등 실시간 검색이 필요한 경우 (예: '오늘 서울 날씨?')\n"
@@ -106,7 +106,7 @@ async def chat_worker_node(state: AgentState) -> Dict[str, Any]:
         "",
     )
     system_prompt = (
-        "너는 Tizen Home Agent의 Chat Agent야. "
+        "너는 Home Agent야. "
         "친절하게 대화하며 Tizen 기기 제어, 실시간 웹 검색, 화면 분석(Vision), HTML 기반 모던 UI 생성 능력을 갖추고 있어. "
         "사용자가 화면에 무엇이 있는지 물으면 vision 기능을 사용하여 대답할 수 있음을 인지하고 대화해줘. "
         "능력을 물어보면 당당하게 소개해줘."
@@ -130,7 +130,7 @@ async def briefing_worker_node(state: AgentState) -> Dict[str, Any]:
     )
     
     system_prompt = (
-        "당신은 사용자의 질문에 대해 실시간 정보를 검색하고, 이를 Tizen OS 장치에서 즉시 확인할 수 있는 현대적인 카드 뉴스 스타일의 HTML로 변환하여 배포하는 'Tizen UI/UX 에이전트'입니다.\n\n"
+        "당신은 사용자의 질문에 대해 실시간 정보를 검색하고, 이를 기기에서 즉시 확인할 수 있는 현대적인 카드 뉴스 스타일의 HTML로 변환하여 배포하는 'Home Agent'입니다.\n\n"
         "### [중요 지침 - 필독]\n"
         "- **어떤 언어(한국어, 영어 등)로 요청받아도 절대로 사용자에게 추가 정보를 묻거나 상세 내용을 요구하지 마세요.**\n"
         "- 위치(지역)나 주제가 모호하다면, 현재 시각 기준의 **전역적인 인기 트렌드나 다수가 선호할 만한 범용적인 추천 정보**를 스스로 판단해 즉시 결과를 도출하세요. (예: 주말 나들이 추천 -> 현재 가장 핫한 장소 3~5곳 자동 선정)\n"
@@ -209,7 +209,7 @@ async def device_worker_node(state: AgentState) -> Dict[str, Any]:
     tizen_tools = build_tizen_langchain_tools()
 
     system_prompt = (
-        "당신은 Tizen 기기 제어 전문가입니다. "
+        "당신은 기기 제어 전문가인 'Home Agent'입니다. "
         "사용자의 명령에 따라 적절한 Tizen 도구를 호출하고 그 실행 결과(성공 또는 실패 여부)를 짧게 요약하세요. "
         "별도의 UI 코드나 부가 설명 없이, 기기 제어 수행 상태만 알려주면 됩니다."
     )
@@ -261,7 +261,7 @@ async def html_gen_worker_node(state: AgentState) -> Dict[str, Any]:
         "",
     )
     system_prompt = (
-        "당신은 Tizen 기기용 프리미엄 웹 인터페이스를 설계하는 전문 UI/UX 디자이너입니다.\n"
+        "당신은 스마트 기기용 프리미엄 웹 인터페이스를 설계하는 전문 UI/UX 디자이너인 'Home Agent'입니다.\n"
         "사용자의 요청에 따라 현대적이고, 세련되며, 즉시 사용 가능한 단일 HTML/CSS 코드를 작성하세요.\n\n"
         "[디자인 원칙]\n"
         "- 배경색은 반드시 투명(background-color: transparent)으로 설정하고, 카드나 컴포넌트 단위로 배경색(#1A1A1A 등)을 부여\n"
@@ -335,7 +335,7 @@ async def app_deploy_worker_node(state: AgentState) -> Dict[str, Any]:
     llm = make_llm("gemini-2.5-flash")
 
     system_prompt = (
-        "당신은 Tizen OS용 웹 애플리케이션 개발 전문가입니다.\n"
+        "당신은 홈 네트워크 및 스마트 서비스를 위한 웹 애플리케이션 개발 전문가인 'Home Agent'입니다.\n"
         "사용자의 요청에 따라 단일 HTML 파일로 작동하는 완성도 높은 웹 앱 코드를 작성하세요.\n\n"
         "[개발 가이드라인]\n"
         "- 모든 HTML, CSS, JavaScript를 하나의 파일에 포함하세요.\n"
@@ -582,14 +582,16 @@ async def vision_worker_node(state: AgentState) -> Dict[str, Any]:
         with open(local_filename, "rb") as image_file:
             encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
             
-        # 4. LLM 멀티모달 분석 요청
-        llm = make_llm("gemini-2.5-flash") # 비전 기능 강화를 위해 2.5-flash 사용
+        # 4. 해상도 정보 가져오기 및 LLM 분석 요청
+        screen_res = get_screen_resolution()
+        width, height = screen_res["width"], screen_res["height"]
         
         prompt = (
             f"사용자 요청: {last_human}\n\n"
-            "위 요청에 따라 Tizen 기기 화면을 분석하세요.\n"
-            "- 사용자가 특정 요소의 '위치', '어디', '좌표', '클릭' 등을 물어보는 경우: 전체 화면 설명은 생략하고, 해당 객체의 영역 [ymin, xmin, ymax, xmax] (0-1000 정규화 좌표)와 중심 클릭 지점(Center X, Center Y) 정보만 간결하고 명확하게 출력하세요.\n"
-            "- 사용자가 단순히 '설명', '이미지 읽어줘', '뭐 있어?' 등 화면 전체 내용을 궁금해하는 경우: 좌표 정보는 생략하고 화면의 전반적인 구성과 내용을 친절하게 설명하세요."
+            f"현재 기기의 화면 해상도는 {width}x{height} 입니다. 위 요청에 따라 화면을 분석하세요.\n"
+            "### [응답 규칙]\n"
+            f"1. **특정 객체의 위치, 좌표, 클릭 지점**을 물어보는 경우: 해당 객체의 영역 [xmin, ymin, xmax, ymax]와 중심 클릭 지점(Center X, Center Y)을 반드시 {width}x{height} 범위 내의 **픽셀(pixel) 값**으로 정확하게 답변하세요.\n"
+            "2. **단순히 화면에 무엇이 있는지 물어보는 경우**: 화면의 전반적인 구성과 주요 요소들을 친절하게 설명하세요. 이 경우 **좌표값이나 숫자 정보는 답변에 절대로 포함하지 마세요.**"
         )
         
         message = HumanMessage(
@@ -602,7 +604,8 @@ async def vision_worker_node(state: AgentState) -> Dict[str, Any]:
             ]
         )
         
-        print("[vision_worker_node] Invoking Multimodal LLM...")
+        print(f"[vision_worker_node] Invoking Multimodal LLM (Resolution: {width}x{height})...")
+        llm = make_llm("gemini-2.5-flash")
         response = await llm.ainvoke([message])
         text_result = response.content
         

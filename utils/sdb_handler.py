@@ -1,5 +1,6 @@
 import json
 import subprocess
+import re
 from typing import List, Dict, Any, Optional
 from config import PORT
 
@@ -99,3 +100,25 @@ def check_sdb_reverse() -> bool:
         return sdb_ok
     except Exception:
         return False
+
+def get_screen_resolution() -> Dict[str, int]:
+    """SDB를 통해 Tizen 기기의 화면 해상도를 추출합니다."""
+    serial = get_device_serial()
+    cmd = ["sdb"]
+    if serial:
+        cmd.extend(["-s", serial])
+    # winfo -screen_info 명령어 실행
+    cmd.extend(["shell", "winfo -screen_info"])
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            # 출력 예시: "... ( 1280 x 720) ..."
+            match = re.search(r"\(\s*(\d+)\s*x\s*(\d+)\s*\)", result.stdout)
+            if match:
+                w, h = int(match.group(1)), int(match.group(2))
+                return {"width": w, "height": h}
+    except Exception as e:
+        print(f"[sdb_handler] Error getting screen info: {e}")
+
+    return {"width": 1280, "height": 720}  # 기본값 반환
