@@ -76,7 +76,7 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
         "6. app_deploy: Tizen용 HTML 앱을 생성하고 배포하는 경우\n"
         "7. youtube_play: 특정 유튜브 영상을 **즉시 재생/시청**하고자 하는 의도가 명확한 경우 (예: '아이유 노래 틀어줘')\n"
         "8. genui: 복잡한 3D 시각화, 차트, 아름다운 꼬여있는 UI 컴포넌트 등 OpenGenerativeUI 기반의 고품질 화면을 생성해달라고 요청하는 경우\n"
-        "9. vision: 사용자가 '화면에 뭐가 있는지', '화면 읽어줘', '지금 뭐 보고 있니' 등 현재 기기 화면 분석을 요청하는 경우\n"
+        "9. vision: 사용자가 현재 기기 화면 분석이나 설명을 요청하는 경우 (예: '화면에 뭐가 있는지 알려줘', '지금 뭐 보고 있니', 'Tell me what is on the screen', 'Read the screen', 'Screen analysis')\n"
         "여러 Task가 필요하면 모두 포함하고 intent를 'complex'로 설정해."
     )
 
@@ -106,8 +106,9 @@ async def chat_worker_node(state: AgentState) -> Dict[str, Any]:
         "",
     )
     system_prompt = (
-        "너는 Tizen Home Agent의 Chat Worker야. "
-        "친절하게 대화하며 Tizen 기기 제어, 실시간 웹 검색, A2UI 기반 화면 생성 능력을 갖추고 있어. "
+        "너는 Tizen Home Agent의 Chat Agent야. "
+        "친절하게 대화하며 Tizen 기기 제어, 실시간 웹 검색, 화면 분석(Vision), HTML 기반 모던 UI 생성 능력을 갖추고 있어. "
+        "사용자가 화면에 무엇이 있는지 물으면 vision 기능을 사용하여 대답할 수 있음을 인지하고 대화해줘. "
         "능력을 물어보면 당당하게 소개해줘."
     )
     llm = make_llm("gemini-2.5-flash")
