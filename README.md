@@ -273,11 +273,11 @@ python test.py
 | :--- | :--- | :--- |
 | **일반 대화** | "안녕? 넌 누구니?" | `Chat Agent`가 응답 (검색 없이 일상 대화) |
 | **웹 검색** | "오늘 서울 우면동 날씨가 어때?" | `Web Search Agent`가 정보를 검색하고 관련 페이지 URL을 화면에 표시 |
-| **브리핑** | "오늘 주요 뉴스 브리핑해줘" | `Briefing Agent`가 검색을 통해 추천 컨텐츠를 카드 뷰 형태로 화면에 표시 |
-| **기기 제어** | "거실 TV 켜줘" / "볼륨 높여줘" | `Device Agent`가 SDB 명령 후 제어 결과 상태(성공/실패) 반환 |
-| **HTML 생성** | "영화 예약 화면 하나 그려줘" | `HTML 생성 에이전트`가 도구 없이 단일 HTML 코드 생성 |
-| **유튜브 검색** | "아이유의 좋은날 유튜브에서 재생해줘" | `YouTube Agent`가 영상을 검색해 플레이 가능한 HTML로 만들어 화면에 표시 |
-| **화면 분석** | "화면에 뭐 있는지 알려줘" | `Vision Agent`가 기기 화면을 캡처하여 현재 화면에 있는 텍스트및 이미지 설명 |
+| **브리핑** | "애들 볼 거 추천해줘", "오늘 주요 뉴스 브리핑해줘" | `Briefing Agent`가 검색을 통해 추천 컨텐츠를 카드 뷰 형태로 화면에 표시 |
+| **기기 제어** | "블루투스 켜줘", "볼륨 높여줘" | `Device Agent`가 SDB 명령 후 제어 결과 상태(성공/실패) 반환 |
+| **HTML 생성** | "날씨 위젯 그려줘", "계산기 만들어줘" | `HTML 생성 에이전트`가 도구 없이 단일 HTML 코드 생성 |
+| **유튜브 검색** | "아기상어 틀어줘" | `YouTube Agent`가 영상을 검색해 플레이 가능한 HTML로 만들어 화면에 표시 |
+| **화면 분석** | "화면에 뭐 있는지 알려줘", "Tizen" 이라는 글자 화면에 있어?" | `Vision Agent`가 기기 화면을 캡처하여 현재 화면에 있는 텍스트 및 이미지 설명 |
 
 <img width="1280" height="720" alt="tizen_screenshot_20260325_113721" src="https://github.com/user-attachments/assets/df39b7b6-297d-417f-b36f-f59f5de16add" />
 <img width="1280" height="720" alt="tizen_screenshot_20260325_113801" src="https://github.com/user-attachments/assets/36b695e8-8cce-4d25-84c5-047007049771" />
