@@ -12,6 +12,7 @@ from graph.nodes import (
     app_deploy_worker_node,
     youtube_worker_node,
     genui_worker_node,
+    vision_worker_node,
     html_synthesizer_node,
 )
 
@@ -29,6 +30,7 @@ def route_to_workers(state: AgentState):
         "app_deploy": "app_deploy_worker_node",
         "youtube_play": "youtube_worker_node",
         "genui": "genui_worker_node",
+        "vision": "vision_worker_node",
     }
     targets = []
     for t in tasks:
@@ -61,6 +63,7 @@ def build_graph() -> StateGraph:
     graph.add_node("app_deploy_worker_node", app_deploy_worker_node)
     graph.add_node("youtube_worker_node", youtube_worker_node)
     graph.add_node("genui_worker_node", genui_worker_node)
+    graph.add_node("vision_worker_node", vision_worker_node)
     graph.add_node("device_worker_node", device_worker_node)
     graph.add_node("html_gen_worker_node", html_gen_worker_node)
     graph.add_node("html_synthesizer_node", html_synthesizer_node)
@@ -80,6 +83,7 @@ def build_graph() -> StateGraph:
             "genui_worker_node": "genui_worker_node",
             "device_worker_node": "device_worker_node",
             "html_gen_worker_node": "html_gen_worker_node",
+            "vision_worker_node": "vision_worker_node",
         },
     )
 
@@ -91,6 +95,7 @@ def build_graph() -> StateGraph:
         "app_deploy_worker_node",
         "youtube_worker_node",
         "genui_worker_node",
+        "vision_worker_node",
         "device_worker_node",
         "html_gen_worker_node",
     ]:
@@ -116,6 +121,7 @@ graph TD
     router_node --> app_deploy_worker_node["📦 App Deploy Worker"]
     router_node --> youtube_worker_node["▶️ YouTube Worker"]
     router_node --> genui_worker_node["✨ GenUI Worker"]
+    router_node --> vision_worker_node["👁️ Vision Worker"]
     router_node --> device_worker_node["📱 Device Worker"]
     router_node --> html_gen_worker_node["🎨 HTML Gen Agent"]
     chat_worker_node --> html_synthesizer_node["🔄 HTML Synthesizer"]
@@ -125,6 +131,7 @@ graph TD
     app_deploy_worker_node --> html_synthesizer_node
     youtube_worker_node --> html_synthesizer_node
     genui_worker_node --> html_synthesizer_node
+    vision_worker_node --> html_synthesizer_node
     device_worker_node --> html_synthesizer_node
     html_gen_worker_node --> html_synthesizer_node
     html_synthesizer_node --> END([✅ END])

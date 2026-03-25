@@ -26,6 +26,7 @@ graph TD
         YouTubeAgent["▶️ 유튜브 검색 에이전트"]
         DeviceAgent["📱 기기 제어 에이전트"]
         HTMLGenAgent["🎨 HTML 생성 에이전트"]
+        VisionAgent["👁️ 화면 분석 에이전트"]
     end
     
     Orchestrator -->|일상 대화| ChatAgent
@@ -34,6 +35,7 @@ graph TD
     Orchestrator -->|영상 검색| YouTubeAgent
     Orchestrator -->|기기 설정| DeviceAgent
     Orchestrator -->|HTML 생성| HTMLGenAgent
+    Orchestrator -->|화면 분석| VisionAgent
     
     ChatAgent --> ResultIntegrator
     WebSearchAgent --> ResultIntegrator
@@ -41,20 +43,22 @@ graph TD
     YouTubeAgent --> ResultIntegrator
     DeviceAgent --> ResultIntegrator
     HTMLGenAgent --> ResultIntegrator
+    VisionAgent --> ResultIntegrator
     
     ResultIntegrator["🔄 결과 통합기\n(결과 수합 및 최종 답변 완성)"] --> END([✅ 최종 응답 반환])
 ```
 
 
 ### 동작 순서
-1. **1단계 (Router)**: 사용자의 메시지가 입력되면 **오케스트레이터 (Orchestrator)**가 요청의 의도를 분석하여 `general_chat`, `search`, `device_control`, `draw_ui`, `briefing`, `youtube_play` 중 필요한 태스크를 결정합니다.
-2. **2단계 (Agent)**: 분류된 태스크에 따라 6종의 **전담 에이전트(Agent)**들이 병렬로 실행됩니다.
+1. **1단계 (Router)**: 사용자의 메시지가 입력되면 **오케스트레이터 (Orchestrator)**가 요청의 의도를 분석하여 `general_chat`, `search`, `device_control`, `draw_ui`, `briefing`, `youtube_play`, `vision` 중 필요한 태스크를 결정합니다.
+2. **2단계 (Agent)**: 분류된 태스크에 따라 7종의 **전담 에이전트(Agent)**들이 병렬로 실행됩니다.
     - **대화 에이전트 (ChatAgent)**: 인사, 일상 대화 등 외부 정보가 필요 없는 답변을 담당합니다.
     - **웹 검색 에이전트 (WebSearchAgent)**: 사용자의 의도에 따라 Google 검색으로 최신 정보를 찾고, 관련 웹 페이지 URL을 추출하여 반환합니다.
     - **뉴스 브리핑 에이전트 (BriefingAgent)**: 정보를 기기에 카드 뉴스 형태의 전용 HTML로 생성하여 반환합니다.
     - **유튜브 검색 에이전트 (YouTubeAgent)**: 요청된 제목의 영상을 검색해 자립형 HTML 플레이어 코드를 생성하여 반환합니다.
     - **기기 제어 에이전트 (DeviceAgent)**: 실제 Tizen 기기 액션을 수행하고 제어 성공/실패 여부를 반환합니다.
     - **HTML 생성 에이전트 (HTMLGenAgent)**: 별도의 도구 호출 없이 창의적인 UI 화면을 순수 HTML 코드로 생성하여 반환합니다.
+    - **화면 분석 에이전트 (VisionAgent)**: 현재 Tizen 기기의 화면을 캡처하여 어떤 내용이 표시되고 있는지 멀티모달 LLM으로 분석하여 설명합니다.
 3. **3단계 (Integration)**: 각 에이전트가 반환한 결과를 통합하여 텍스트 답변과 최종 UI HTML 코드를 클라이언트에 전달합니다.
 
 ---
@@ -272,14 +276,16 @@ Router-Agent 아키텍처의 각 에이전트가 정상적으로 동작하는지
 | **HTML 생성** | "영화 예약 화면 하나 그려줘" | `HTML 생성 에이전트`가 도구 없이 단일 HTML 코드 생성 |
 | **복합 요청** | "안녕? 에어컨 켜고 오늘 날씨 알려줘" | `Router`가 2개 이상의 태스크로 분류 후 각 에이전트의 결과를 통합하여 응답 |
 | **유튜브 검색** | "아이유의 좋은날 유튜브에서 재생해줘" | `YouTube Agent`가 영상을 검색해 플레이 가능한 HTML로 만들고 TV에서 자동 재생 |
+| **화면 분석** | "화면에 뭐 있는지 알려줘" | `Vision Agent`가 기기 화면을 캡처하여 현재 실행 중인 콘텐츠를 설명 |
 
 ## 라이선스
 MIT License
 
 ---
-**마지막 수정 날짜:** 2026-03-24 21:35
+**마지막 수정 날짜:** 2026-03-25 10:45
 
-**수정 사항:** 기기 UI와의 오버레이를 고려하여, 모든 생성되는 HTML의 배경색을 **투명(`transparent`)**으로 설정하도록 가이드라인 및 템플릿을 수정했습니다.
+**수정 사항:** **화면 분석 에이전트 (Vision Agent)**를 추가하였습니다. Tizen 기기의 스크린샷을 찍어 현재 화면 내용을 멀티모달 LLM으로 분석하여 설명해 주는 기능이 구현되었습니다.
+
 
 
 

@@ -3,6 +3,7 @@ import json
 import subprocess
 from typing import List, Dict, Any, cast
 import requests
+import base64
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -75,6 +76,7 @@ async def router_node(state: AgentState) -> Dict[str, Any]:
         "6. app_deploy: Tizen용 HTML 앱을 생성하고 배포하는 경우\n"
         "7. youtube_play: 특정 유튜브 영상을 **즉시 재생/시청**하고자 하는 의도가 명확한 경우 (예: '아이유 노래 틀어줘')\n"
         "8. genui: 복잡한 3D 시각화, 차트, 아름다운 꼬여있는 UI 컴포넌트 등 OpenGenerativeUI 기반의 고품질 화면을 생성해달라고 요청하는 경우\n"
+        "9. vision: 사용자가 '화면에 뭐가 있는지', '화면 읽어줘', '지금 뭐 보고 있니' 등 현재 기기 화면 분석을 요청하는 경우\n"
         "여러 Task가 필요하면 모두 포함하고 intent를 'complex'로 설정해."
     )
 
@@ -535,5 +537,70 @@ async def genui_worker_node(state: AgentState) -> Dict[str, Any]:
         text_result = f"화면 시각화 중 오류가 발생했습니다: {e}"
 
     result: WorkerResult = {"task": "genui", "text": text_result, "ui_code": final_html if 'final_html' in locals() else ""}
+    return {"worker_results": [result]}
+
+async def vision_worker_node(state: AgentState) -> Dict[str, Any]:
+    """Vision Agent Node: 기기 화면을 캡처하고 멀티모달 LLM으로 분석하여 설명합니다."""
+    print("[vision_worker_node] Capturing screen and analyzing contents...")
+    
+    serial = get_device_serial()
+    local_filename = f"capture_{serial}.png"
+    remote_tmp = f"/tmp/{local_filename}"
+    
+    try:
+        # 1. 캡처 명령 실행 (enlightenment_info 사용)
+        cmd_base = ["sdb"]
+        if serial: cmd_base.extend(["-s", serial])
+        
+        # 권한 확보 시도 (옵션)
+        subprocess.run(cmd_base + ["root", "on"], capture_output=True, timeout=5)
+        
+        # 캡처
+        cap_cmd = cmd_base + ["shell", f'enlightenment_info -dump_screen winfo -p /tmp/ -n {local_filename}']
+        print(f"[vision_worker_node] Executing: {' '.join(cap_cmd)}")
+        subprocess.run(cap_cmd, capture_output=True, check=True, timeout=15)
+        
+        # 2. 파일 가져오기 (Pull)
+        pull_cmd = cmd_base + ["pull", remote_tmp, "."]
+        subprocess.run(pull_cmd, capture_output=True, check=True, timeout=15)
+        
+        # 3. 이미지 읽기 및 Base64 인코딩
+        if not os.path.exists(local_filename):
+            raise FileNotFoundError(f"Screenshot file not found: {local_filename}")
+            
+        with open(local_filename, "rb") as image_file:
+            encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
+            
+        # 4. LLM 멀티모달 분석 요청
+        llm = make_llm("gemini-1.5-flash") # 비전 기능 강화를 위해 1.5-flash 이상 권장
+        
+        prompt = "이 사진은 현재 Tizen 기기 화면이야. 화면에 어떤 앱이나 콘텐츠가 실행 중인지, 텍스트나 아이콘 정보가 무엇인지 상세하게 분석해서 설명해줘."
+        
+        message = HumanMessage(
+            content=[
+                {"type": "text", "text": prompt},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{encoded_image}"},
+                },
+            ]
+        )
+        
+        print("[vision_worker_node] Invoking Multimodal LLM...")
+        response = await llm.ainvoke([message])
+        text_result = response.content
+        
+        # 5. 정리 (Cleanup)
+        if os.path.exists(local_filename):
+            os.remove(local_filename)
+        subprocess.run(cmd_base + ["shell", f"rm {remote_tmp}"], capture_output=True, timeout=5)
+        
+    except Exception as e:
+        print(f"[vision_worker_node] Error: {e}")
+        text_result = f"화면을 캡처하거나 분석하는 중 오류가 발생했습니다: {e}"
+        if os.path.exists(local_filename):
+            os.remove(local_filename)
+
+    result: WorkerResult = {"task": "vision", "text": text_result, "ui_code": ""}
     return {"worker_results": [result]}
 
