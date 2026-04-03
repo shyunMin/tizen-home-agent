@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주말, 어디로 떠나볼까요? - 홈 에이전트</title>
+    <!-- Pretendard Font CDN -->
+    <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- GSAP CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        body {
+            background: transparent;
+            /* Google TV Gemini Style: 배경은 반드시 투명 */
+            font-family: 'Pretendard', sans-serif;
+            color: #E0E0E0;
+            /* 일반 텍스트 색상 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+            /* 가로 스크롤 방지 */
+        }
+
+        /* Glassmorphism Card Style */
+        .glass-card {
+            background-color: rgba(30, 30, 30, 0.7);
+            /* 반투명 다크 배경 */
+            backdrop-filter: blur(25px);
+            /* 강력한 블러 효과 */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            /* 미묘한 경계선 */
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            /* 부드러운 애니메이션 */
+            will-change: transform, box-shadow;
+            /* 성능 최적화 */
+        }
+
+        /* Interactive States: 리모컨 포커스(마우스 호버) 시 카드 확대 및 내부 광채 */
+        .glass-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 30px rgba(161, 66, 244, 0.6),
+                /* 외부 광채 */
+                inset 0 0 20px rgba(255, 255, 255, 0.15);
+            /* 내부 광채 */
+        }
+
+        /* Premium Typography: 젬나이 특유의 그라데이션 텍스트 */
+        .gradient-text {
+            background-image: linear-gradient(to right, #4285F4, #A142F4, #F442A1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            /* 비-웹킷 브라우저 폴백 */
+        }
+    </style>
+</head>
+
+<body class="bg-transparent">
+    <div class="max-w-6xl w-full mx-auto p-4 md:p-8">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-center mb-12 gradient-text title-element">
+            ✨ 주말, 어디로 떠나볼까요?
+        </h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- 카드 1: 제주도 -->
+            <div class="glass-card rounded-3xl overflow-hidden shadow-lg p-6 flex flex-col items-start card-item">
+                <div class="w-full h-48 md:h-56 rounded-2xl overflow-hidden mb-5">
+                    <img src="https://images.unsplash.com/photo-1579168765239-50953a99e719?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                        alt="제주 성산일출봉"
+                        class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
+                </div>
+                <h2 class="text-3xl font-bold mb-3 text-white">제주, 푸른 자연 속 힐링</h2>
+                <p class="text-lg text-gray-300 leading-relaxed flex-grow">
+                    에메랄드빛 바다와 신비로운 오름이 어우러진 한국의 보석, 제주에서 몸과 마음을 쉬게 하세요.
+                    해안도로 드라이브와 신선한 해산물은 덤!
+                </p>
+                <div class="mt-6 w-full text-right">
+                    <a href="#"
+                        class="inline-block text-blue-400 hover:text-blue-300 font-semibold text-lg transition-colors duration-200">
+                        자세히 보기 &rarr;
+                    </a>
+                </div>
+            </div>
+
+            <!-- 카드 2: 경주 -->
+            <div class="glass-card rounded-3xl overflow-hidden shadow-lg p-6 flex flex-col items-start card-item">
+                <div class="w-full h-48 md:h-56 rounded-2xl overflow-hidden mb-5">
+                    <img src="https://images.unsplash.com/photo-1628172421415-373812702758?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                        alt="경주 대릉원"
+                        class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
+                </div>
+                <h2 class="text-3xl font-bold mb-3 text-white">천년고도 경주, 시간 여행의 시작</h2>
+                <p class="text-lg text-gray-300 leading-relaxed flex-grow">
+                    신라의 숨결이 살아 숨 쉬는 경주에서 고즈넉한 유적과 아름다운 야경을 만끽하며 역사 속으로 떠나보세요.
+                    황리단길의 감성도 놓치지 마세요!
+                </p>
+                <div class="mt-6 w-full text-right">
+                    <a href="#"
+                        class="inline-block text-blue-400 hover:text-blue-300 font-semibold text-lg transition-colors duration-200">
+                        자세히 보기 &rarr;
+                    </a>
+                </div>
+            </div>
+
+            <!-- 카드 3: 강릉 -->
+            <div class="glass-card rounded-3xl overflow-hidden shadow-lg p-6 flex flex-col items-start card-item">
+                <div class="w-full h-48 md:h-56 rounded-2xl overflow-hidden mb-5">
+                    <img src="https://images.unsplash.com/photo-1626249911956-65c2759e663a?q=80&w=2942&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                        alt="강릉 안목해변 카페거리"
+                        class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
+                </div>
+                <h2 class="text-3xl font-bold mb-3 text-white">강릉, 동해 바다의 낭만과 맛</h2>
+                <p class="text-lg text-gray-300 leading-relaxed flex-grow">
+                    파도 소리 가득한 해변, 향긋한 커피와 신선한 해산물이 있는 강릉에서 여유로운 주말을 즐겨보세요.
+                    낭만적인 바다를 배경으로 인생샷은 필수!
+                </p>
+                <div class="mt-6 w-full text-right">
+                    <a href="#"
+                        class="inline-block text-blue-400 hover:text-blue-300 font-semibold text-lg transition-colors duration-200">
+                        자세히 보기 &rarr;
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Motion Design: GSAP을 활용한 부드러운 초기 로드 애니메이션
+        // Visibility First 원칙 준수: JS 로드 실패 시에도 콘텐츠는 즉시 보입니다.
+        // GSAP은 이미 보이는 요소들을 더 부드럽게 나타나도록 'from' 애니메이션을 적용합니다.
+        document.addEventListener('DOMContentLoaded', () => {
+            gsap.from(".title-element", {
+                opacity: 0,
+                y: -30,
+                duration: 1,
+                ease: "power3.out",
+                delay: 0.2
+            });
+
+            gsap.from(".card-item", {
+                opacity: 0,
+                y: 50,
+                scale: 0.95,
+                duration: 0.8,
+                ease: "power3.out",
+                stagger: 0.15, // 카드들이 순차적으로 나타나는 효과
+                delay: 0.4 // 제목 애니메이션 후 시작
+            });
+        });
+    </script>
+</body>
+
+</html>

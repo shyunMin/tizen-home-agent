@@ -1,0 +1,46 @@
+{
+  "model": "gemini-2.5-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "설치된 앱 목록 알려줘"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "action_homeWifiList",
+        "description": "Execute this action on the device via the Tizen Action Framework.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "execute_action",
+        "description": "Execute a Tizen Action Framework action by name with given arguments.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The action name to execute"
+            },
+            "arguments": {
+              "type": "object",
+              "description": "Arguments for the action"
+            }
+          },
+          "required": [
+            "name"
+          ]
+        }
+      }
+    }
+  ]
+}

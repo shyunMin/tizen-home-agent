@@ -1,0 +1,3 @@
+[submodule "OpenGenerativeUI"]
+	path = OpenGenerativeUI
+	url = https://github.com/CopilotKit/OpenGenerativeUI.git

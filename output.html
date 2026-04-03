@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘의 브리핑</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Pretendard Font CDN -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        /* Gemini Gradient for Text */
+        :root {
+            --gemini-gradient: linear-gradient(90deg, #4285F4, #A142F4, #F442A1);
+        }
+
+        /* Base Body Styles */
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background: transparent; /* Glassmorphism: Transparent background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden; /* Prevents scrollbars from card expansion */
+            color: #E0E0E0; /* Default text color */
+        }
+
+        /* Gemini Gradient Text Style */
+        .gemini-gradient-text {
+            background: var(--gemini-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent; /* Fallback for browsers not supporting text-fill-color */
+        }
+
+        /* CSS Keyframe Animations for Fallback and Base Motion */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Card Specific Styles */
+        .card {
+            background-color: rgba(0, 0, 0, 0.4); /* Glassmorphism: Translucent dark background */
+            backdrop-filter: blur(25px); /* Glassmorphism: Strong blur effect */
+            border-radius: 20px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transform: scale(1); /* Initial scale */
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            animation: fadeInUp 0.6s ease-out forwards; /* Default entrance animation */
+            opacity: 0; /* Initial state for CSS animation */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Subtle initial shadow */
+        }
+
+        /* Interactive States: Hover/Focus */
+        .card:hover,
+        .card:focus-within {
+            transform: scale(1.03); /* Slightly enlarge */
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.7), 0 0 60px rgba(161, 66, 244, 0.5); /* Enhanced glow */
+            z-index: 10; /* Bring hovered card to front */
+            outline: none; /* Remove default focus outline */
+        }
+
+        /* Inner Glow Effect for Interactive States */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+        }
+
+        .card:hover::before,
+        .card:focus-within::before {
+            opacity: 1; /* Show inner glow on hover/focus */
+        }
+
+        /* Image Container Styling */
+        .card-image-container {
+            width: 100%;
+            height: 180px; /* Fixed height for consistent layout */
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            background-color: rgba(255, 255, 255, 0.1); /* Placeholder background */
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Cover container while maintaining aspect ratio */
+            display: block;
+        }
+
+        /* Staggered animation delays (CSS fallback) */
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+
+        /* Initial state for container, GSAP will animate */
+        .briefing-container {
+            opacity: 0; /* Hidden initially, GSAP will manage visibility */
+        }
+    </style>
+</head>
+<body class="text-white">
+    <div class="briefing-container max-w-6xl w-full mx-auto p-4">
+        <h1 class="text-5xl font-extrabold mb-12 text-center gemini-gradient-text">오늘의 브리핑</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Card 1: 오늘의 날씨 -->
+            <div class="card" tabindex="0">
+                <div class="card-image-container">
+                    <img src="https://loremflickr.com/800/600/weather,sky" alt="오늘의 날씨" class="card-image" onerror="this.style.display='none'">
+                </div>
+                <h2 class="text-3xl font-bold mb-4 gemini-gradient-text">오늘의 날씨</h2>
+                <p class="text-lg text-gray-200">
+                    현재 서울은 맑고 쾌청한 날씨입니다. 최고 기온 28°C, 최저 기온 18°C로 일교차가 크니 겉옷을 챙기시는 것이 좋겠습니다. 미세먼지 농도는 '좋음' 수준을 유지하고 있습니다.
+                </p>
+            </div>
+
+            <!-- Card 2: 최신 기술 트렌드 요약 -->
+            <div class="card" tabindex="0">
+                <div class="card-image-container">
+                    <img src="https://loremflickr.com/800/600/technology,ai" alt="최신 기술 트렌드" class="card-image" onerror="this.style.display='none'">
+                </div>
+                <h2 class="text-3xl font-bold mb-4 gemini-gradient-text">기술 트렌드</h2>
+                <p class="text-lg text-gray-200">
+                    최근 AI 기반의 개인화된 학습 플랫폼이 주목받고 있습니다. 사용자 맞춤형 콘텐츠 추천과 실시간 피드백을 통해 교육 효율을 극대화하는 기술이 빠르게 발전 중입니다.
+                </p>
+            </div>
+
+            <!-- Card 3: 건강한 하루를 위한 팁 -->
+            <div class="card" tabindex="0">
+                <div class="card-image-container">
+                    <img src="https://loremflickr.com/800/600/health,wellness" alt="건강한 하루를 위한 팁" class="card-image" onerror="this.style.display='none'">
+                </div>
+                <h2 class="text-3xl font-bold mb-4 gemini-gradient-text">건강 팁</h2>
+                <p class="text-lg text-gray-200">
+                    하루를 활기차게 시작하려면 아침 식사를 거르지 않는 것이 중요합니다. 통곡물, 단백질, 과일 위주로 구성된 식단은 집중력 향상과 활력 유지에 큰 도움이 됩니다.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- GSAP CDN for enhanced animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script>
+        // GSAP to animate the main container and stagger cards for a premium feel
+        // This overrides CSS keyframes for smoother control, while keyframes act as a fallback.
+
+        // Animate the main briefing container into view
+        gsap.fromTo(".briefing-container",
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
+        );
+
+        // Animate each card with a staggered effect
+        gsap.fromTo(".card",
+            { opacity: 0, y: 30 },
+            { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", stagger: 0.15, delay: 0.3 }
+        );
+
+        // Optionally, remove CSS animation for cards if GSAP is active to avoid potential conflicts
+        // This ensures GSAP has full control over the entrance animation once loaded.
+        document.querySelectorAll('.card').forEach(card => {
+            if (typeof gsap !== 'undefined') { // Check if GSAP loaded successfully
+                card.style.animation = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
