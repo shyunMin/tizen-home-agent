@@ -6,16 +6,38 @@ import os
 from typing import Optional
 
 def get_device_serial() -> Optional[str]:
-    """연결된 첫 번째 Tizen 기기 시리얼 반환."""
+    """연결된 Tizen 기기 시리얼 반환. 여러 대인 경우 선택."""
     try:
         res = subprocess.run(["sdb", "devices"], capture_output=True, text=True)
         lines = res.stdout.strip().split("\n")
-        if len(lines) <= 1:
+        devices = []
+        if len(lines) > 1:
+            for line in lines[1:]:
+                parts = line.split()
+                if len(parts) >= 2 and parts[1] == "device":
+                    devices.append(parts[0])
+        
+        if not devices:
             return None
-        for line in lines[1:]:
-            parts = line.split()
-            if len(parts) >= 2 and parts[1] == "device":
-                return parts[0]
+        
+        if len(devices) == 1:
+            return devices[0]
+        
+        print("\n여러 대의 기기가 발견되었습니다:")
+        for i, serial in enumerate(devices):
+            print(f"[{i+1}] {serial}")
+            
+        while True:
+            choice = input(f"연결할 기기 번호를 선택하세요 (1-{len(devices)}): ").strip()
+            if not choice:
+                continue
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(devices):
+                    return devices[idx]
+            except ValueError:
+                pass
+            print(f"잘못된 선택입니다. 1에서 {len(devices)} 사이의 숫자를 입력하세요.")
     except Exception:
         pass
     return None
